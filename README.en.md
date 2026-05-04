@@ -135,6 +135,7 @@ wpf-gui-testkit/
 | `WPF_TEST_APP_PROCESS_NAME` | `app.exe` | Process name (crash detection & cleanup, recursive child-kill) |
 | `WPF_TEST_APP_DATA_DIR` | (empty) | App data dir name under `%APPDATA%` (cleanup between runs) |
 | `WPF_TEST_MAIN_WINDOW_ID` | `MainWindow` | `AutomationProperties.AutomationId` of the main window |
+| `WPF_TEST_GUIDE_WINDOW_TITLE` | (empty) | Title of the first-launch guide window to auto-close |
 
 ## API Reference
 
@@ -294,6 +295,46 @@ settings.close()
 
 5. **Visibility=Collapsed controls are invisible to UIA**
    UIA does not expose auto_id for `Visibility=Collapsed` controls. You'll need to make them visible first, or search directly under the parent.
+
+## pytest Fixtures (conftest.py)
+
+The `wpf_testkit.core.conftest` module provides ready-to-use pytest fixtures. Simply import it in your test file:
+
+```python
+from wpf_testkit.core.conftest import *  # noqa
+```
+
+### Fixture Reference
+
+| Fixture | Scope | Description |
+|---------|-------|-------------|
+| `session_cleanup` | session (autouse) | Kills any leftover processes and cleans `%APPDATA%` before and after the entire test session |
+| `app_launch` | function | Starts a fresh app instance per test case. Kills old processes first, then starts `APP_PATH`, polls for the main window (up to 15s), and optionally closes a guide overlay window (see `GUIDE_WINDOW_TITLE`). Yields the `Application` object. |
+| `app_connect` | function | Connects to an already-running app. Use when you don't want to restart the app between tests. |
+| `main_window` | function | Returns the main window of the launched app (wraps `app_launch`). Polls up to 15s for the `MAIN_WINDOW_ID` auto_id. |
+| `screenshot_manager` | function | Creates a `ScreenshotManager` instance with auto-cleanup of screenshots older than 7 days. |
+| `auto_screenshot_on_failure` | function (autouse) | Automatically takes a desktop screenshot and saves to `screenshots/failures/` when a test fails. |
+| `crash_daemon` | function (autouse) | Uses `app_launch`. Starts a background thread that polls the app process every 2 seconds. If the process disappears unexpectedly, records the crash and marks the test as failed. |
+
+### Guide Window Close
+
+If your app shows a first-launch guide overlay that blocks the main window, set the `WPF_TEST_GUIDE_WINDOW_TITLE` environment variable:
+
+```bash
+set WPF_TEST_GUIDE_WINDOW_TITLE=Welcome
+```
+
+The `app_launch` fixture will automatically find and close it via `FindWindowW` + `PostMessageW(WM_CLOSE)`.
+
+### Controlling AppData Cleanup (session_cleanup)
+
+Set `WPF_TEST_APP_DATA_DIR` to the directory name under `%APPDATA%` that your app uses:
+
+```bash
+set WPF_TEST_APP_DATA_DIR=MyApp
+```
+
+This directory will be wiped before each test by the `session_cleanup` fixture.
 
 ## Visual Regression Testing (L3)
 

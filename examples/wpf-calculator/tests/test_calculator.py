@@ -141,3 +141,21 @@ class TestCalculator:
         page.assert_display("-5")
         page.click_element(page.BTN_NEGATE)
         page.assert_display("5")
+
+    # ================================================================
+    #  键盘输入
+    # ================================================================
+
+    @pytest.mark.P1
+    def test_keyboard_input(self, app_launch, main_window):
+        """通过 press_keys 输入 123+456= 结果应为 579"""
+        page = CalculatorPage(app_launch)
+        result = page.press_keys("123+456=")
+        assert result == "579", f"键盘输入 123+456= 结果应为 579，实际 {result}"
+
+    @pytest.mark.P2
+    def test_keyboard_decimal(self, app_launch, main_window):
+        """键盘输入 3.5+1.5= 结果应为 5"""
+        page = CalculatorPage(app_launch)
+        result = page.press_keys("3.5+1.5=")
+        assert result == "5", f"3.5+1.5= 结果应为 5，实际 {result}"

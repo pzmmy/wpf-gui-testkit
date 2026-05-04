@@ -116,7 +116,7 @@
                     Style="{StaticResource NumBtnStyle}"
                     Click="Number_Click"
                     AutomationProperties.AutomationId="Btn6"/>
-            <Button Grid.Row="2" Grid.Column="3" Content="−"
+            <Button Grid.Row="2" Grid.Column="3" Content="-"
                     Style="{StaticResource OpBtnStyle}"
                     Click="Operator_Click"
                     AutomationProperties.AutomationId="BtnMinus"/>

@@ -136,6 +136,7 @@ wpf-gui-testkit/
 | `WPF_TEST_APP_PROCESS_NAME` | `app.exe` | 被测应用进程名（用于崩溃检测和进程清理，含子进程递归杀） |
 | `WPF_TEST_APP_DATA_DIR` | (空) | `%APPDATA%` 下的应用数据目录名（测试间清理用） |
 | `WPF_TEST_MAIN_WINDOW_ID` | `MainWindow` | 主窗口 `AutomationProperties.AutomationId` |
+| `WPF_TEST_GUIDE_WINDOW_TITLE` | (空) | 首次启动引导页窗口标题（自动关闭用） |
 
 ## API 参考
 

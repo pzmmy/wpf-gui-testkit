@@ -33,6 +33,9 @@ APP_DATA_DIR = os.environ.get("WPF_TEST_APP_DATA_DIR", "App")
 # 可环境变量覆盖：WPF_TEST_MAIN_WINDOW_ID
 MAIN_WINDOW_ID = os.environ.get("WPF_TEST_MAIN_WINDOW_ID", "MainWindow")
 
+# 可环境变量覆盖：WPF_TEST_GUIDE_WINDOW_TITLE（首次引导页标题，为空则跳过关闭引导页）
+GUIDE_WINDOW_TITLE = os.environ.get("WPF_TEST_GUIDE_WINDOW_TITLE", "")
+
 
 # ── 辅助函数 ──
 
@@ -112,21 +115,29 @@ def app_launch() -> Application:
     app = Application(backend="uia")
     app.start(APP_PATH, timeout=20)
 
-    # 等窗口创建
-    time.sleep(3)
+    # 轮询等待主窗口出现（替代 time.sleep 硬等）
+    from pywinauto import Desktop
+    desktop = Desktop(backend="uia")
+    for _ in range(15):
+        try:
+            win = desktop.window(auto_id=MAIN_WINDOW_ID)
+            if win.exists():
+                break
+        except Exception:
+            pass
+        time.sleep(1)
 
-    # 通过 Win32 API 关闭引导页（如存在）
-    import ctypes
-    try:
-        user32 = ctypes.windll.user32
-        hwnd = user32.FindWindowW(None, "简听 · 快速上手")
-        if hwnd:
-            user32.PostMessageW(hwnd, 0x0010, 0, 0)
-            time.sleep(0.5)
-    except Exception:
-        pass
-
-    time.sleep(2)
+    # 关闭引导页窗口（如配置了标题）
+    if GUIDE_WINDOW_TITLE:
+        import ctypes
+        try:
+            user32 = ctypes.windll.user32
+            hwnd = user32.FindWindowW(None, GUIDE_WINDOW_TITLE)
+            if hwnd:
+                user32.PostMessageW(hwnd, 0x0010, 0, 0)
+                time.sleep(0.5)
+        except Exception:
+            pass
 
     yield app
 

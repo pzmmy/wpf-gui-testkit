@@ -30,6 +30,7 @@ class CrashDaemon:
         self.last_pid: Optional[int] = None
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._stop_time: float = 0.0  # stop() 时记录时间戳，减少假阳性
 
     def start(self) -> "CrashDaemon":
         """启动守护线程。"""
@@ -39,6 +40,7 @@ class CrashDaemon:
 
     def stop(self) -> "CrashDaemon":
         """停止守护线程。"""
+        self._stop_time = time.time()
         self._stop_event.set()
         if self._thread:
             self._thread.join(timeout=5)
@@ -61,6 +63,10 @@ class CrashDaemon:
             if found_pid:
                 self.last_pid = found_pid
             elif self.last_pid is not None:
+                # 检查是否在 stop 时间附近（区分正常退出 vs 崩溃）
+                if self._stop_time > 0 and time.time() - self._stop_time < 3:
+                    # 3秒内的进程消失视为正常停止，不报告崩溃
+                    break
                 self.crashed = True
                 self.crash_time = time.strftime("%Y%m%d_%H%M%S")
                 self._write_crash_log()

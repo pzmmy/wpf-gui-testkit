@@ -5,16 +5,21 @@ from pywinauto import Desktop
 
 
 def get_dpi_scale() -> float:
-    """获取当前 DPI 缩放比例。"""
+    """获取当前 DPI 缩放比例。
+
+    通过任务栏矩形取最短边长估算。
+    支持任务栏在任意方向（底部/顶部/左侧/右侧）。
+    """
     try:
         desktop = Desktop(backend="uia")
-        # 取任务栏高度来估算 DPI（任务栏通常 ~40px at 100%）
+        # 取任务栏来估算 DPI
         taskbar = desktop.window(class_name="Shell_TrayWnd")
         if taskbar.exists():
             rect = taskbar.rectangle()
-            taskbar_height = rect.height()
-            # 100% DPI 时任务栏高度约为 40
-            return taskbar_height / 40.0
+            # 取最短边（无论任务栏水平还是垂直放置，任务栏的短边 ≈ 40px at 100%）
+            short_side = min(rect.width(), rect.height())
+            # 100% DPI 时任务栏短边约为 40
+            return short_side / 40.0
     except Exception:
         pass
     return 1.0

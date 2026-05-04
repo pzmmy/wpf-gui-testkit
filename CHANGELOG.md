@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.4.1 (2026-05-04)
+
+- 🐛 **Calculator 测试修复** — 4 个失败全部归零（14/14 通过）
+  - `MainWindow.xaml` 减号按钮 Content 从 `−` (U+2212 MINUS SIGN) 改为 `-` (U+002D HYPHEN-MINUS)，修复 C# `Operator_Click` 中 switch 匹配不到操作符的 bug
+  - `enter_digits()` 移除 `-` → `BtnNegate` 的错误映射（操作符由 `click_operator` 统一处理）
+  - `press_keys()` 末尾补上 `return self.get_display_text()`（之前返回 None）
+  - `run_calc_tests.bat` 指向 `bin\Release\net8.0-windows\win-x64\`（之前指向旧路径 `bin\x64\Release\...`）
+- 📝 **README.en.md 补全** — 新增 conftest fixtures 说明、guide window close 配置、app_connect 使用方式，与中文版功能对齐
+
 ## v0.4.0 (2026-05-04)
 
 - 🆕 **视觉回归引擎（L3）** — `visual_diff.py`，零额外依赖

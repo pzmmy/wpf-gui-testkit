@@ -44,14 +44,12 @@ class CalculatorPage(BasePage):
             self.click_element(btn_id)
 
     def enter_digits(self, digits: str):
-        """依次输入多位数字。"""
+        """依次输入多位数字（含小数点）。"""
         for ch in digits:
             if ch.isdigit():
                 self.enter_number(int(ch))
             elif ch == '.':
                 self.click_element(self.BTN_DECIMAL)
-            elif ch == '-':
-                self.click_element(self.BTN_NEGATE)
 
     def click_operator(self, op: str):
         """点击运算符。"""
@@ -87,7 +85,7 @@ class CalculatorPage(BasePage):
     def compute(self, expression: str) -> str:
         """输入表达式并计算结果。
 
-        格式: '1+2', '3*4', '10/2'
+        格式: '1+2', '3-4', '5*6', '10/2'
         返回: 显示屏文本
         """
         if '+' in expression:
@@ -121,6 +119,7 @@ class CalculatorPage(BasePage):
 
         格式: '123+456=' 或 '10/2='
         """
+        import time
         for ch in keys:
             if ch.isdigit():
                 self.enter_number(int(ch))
@@ -133,3 +132,5 @@ class CalculatorPage(BasePage):
                 self.click_equals()
             elif ch == 'C':
                 self.click_clear()
+            time.sleep(0.05)  # 按键间隔，避免UI过载
+        return self.get_display_text()

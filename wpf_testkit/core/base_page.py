@@ -57,26 +57,43 @@ class BasePage:
 
     # ── 操作 ──
 
-    def click_element(self, auto_id: str, timeout: float = 10):
+    def click_element(self, auto_id: str, timeout: float = 10,
+                       debug: bool = False):
         """点击指定控件，自动降级兜底。
 
         降级链: click() → click_input() → invoke() → set_focus + ENTER
+
+        参数:
+            auto_id: 控件 AutomationId
+            timeout: 等待控件可用的超时秒数
+            debug: 为 True 时打印每次降级的详细日志
         """
         ctrl = self.window.child_window(auto_id=auto_id)
         ctrl.wait("enabled", timeout=timeout)
-        try:
-            ctrl.click()
-        except (AttributeError, NotImplementedError):
-            ctrl.click_input()
-        except Exception:
+
+        strategies = [
+            ("click", lambda: ctrl.click()),
+            ("click_input", lambda: ctrl.click_input()),
+            ("invoke", lambda: ctrl.invoke()),
+            ("set_focus+ENTER", lambda: (
+                ctrl.set_focus(), ctrl.type_keys("{ENTER}")
+            )),
+        ]
+        last_error = None
+        for name, action in strategies:
             try:
-                ctrl.click_input()
-            except Exception:
-                try:
-                    ctrl.invoke()
-                except Exception:
-                    ctrl.set_focus()
-                    ctrl.type_keys("{ENTER}")
+                action()
+                if debug:
+                    print(f"[BasePage] click_element({auto_id}) 使用: {name}")
+                return
+            except Exception as e:
+                if debug:
+                    print(f"[BasePage] click_element({auto_id}) {name} 失败: {e}")
+                last_error = e
+                continue
+        raise RuntimeError(
+            f"click_element 全部降级失败 ({auto_id}): {last_error}"
+        )
 
     def click_input_element(self, auto_id: str, timeout: float = 10):
         """用 click_input 替代 click，适合 WPF 自定义控件。"""
@@ -88,11 +105,14 @@ class BasePage:
             ctrl.invoke()
 
     def set_text(self, auto_id: str, text: str, timeout: float = 10):
-        """在文本框中输入内容。"""
+        """在文本框中输入内容。
+
+        使用 Ctrl+A → Delete 清空已有内容（兼容 PasswordBox 等不支持 clear() 的控件）。
+        """
         ctrl = self.window.child_window(auto_id=auto_id)
         ctrl.wait("enabled", timeout=timeout)
         ctrl.set_focus()
-        ctrl.clear()
+        ctrl.type_keys("^a{DELETE}")  # Ctrl+A 全选，Delete 删除
         ctrl.type_keys(text, with_spaces=True)
 
     def get_text(self, auto_id: str) -> str:
