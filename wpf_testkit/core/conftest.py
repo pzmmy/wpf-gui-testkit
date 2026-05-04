@@ -10,9 +10,8 @@ from __future__ import annotations
 
 import os
 import time
-import subprocess
 import shutil
-from typing import Generator, Optional
+from typing import Generator
 
 import pytest
 import psutil

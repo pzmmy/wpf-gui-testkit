@@ -33,3 +33,18 @@ include = ["wpf_testkit*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E402",  # mock pywinauto requires module-level import after sys.modules patch
+    "E501",  # line-length handled by formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+

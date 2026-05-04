@@ -17,9 +17,8 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, Tuple
 
-from PIL import Image, ImageChops, ImageDraw
+from PIL import Image, ImageChops
 
 
 class DiffResult:
@@ -52,7 +51,7 @@ class DiffResult:
         if self.baseline_missing:
             return f"❌ Baseline 不存在: {self.baseline_path}"
         if self.size_mismatch:
-            return f"⚠️ 尺寸不匹配"
+            return "⚠️ 尺寸不匹配"
         passing = "✅" if self.diff_pct < 0.05 else "❌"
         return (
             f"{passing} 差异: {self.diff_pct:.2%} "

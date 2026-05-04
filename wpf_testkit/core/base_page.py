@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Optional, Dict, Callable
+from typing import Optional, Dict
 
 from pywinauto import Application
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 import os
 import time
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -73,11 +73,10 @@ class TestExceptions:
 class TestScreenshotManager:
     def test_init_creates_dirs(self, tmp_path):
         save_dir = str(tmp_path / "shots")
-        sm = ScreenshotManager(save_dir)
+        _ = ScreenshotManager(save_dir)
         assert os.path.exists(save_dir)
         assert os.path.exists(os.path.join(save_dir, "baseline"))
         assert os.path.exists(os.path.join(save_dir, "failures"))
-
     def test_capture_fallback_on_failure(self, tmp_path):
         save_dir = str(tmp_path / "shots")
         sm = ScreenshotManager(save_dir)
@@ -281,7 +280,7 @@ class TestBasePage:
 
     def test_wait_visible_delegates(self):
         page, mock_win = self._make_test_page()
-        result = page.wait_visible(timeout=5)
+        _result = page.wait_visible(timeout=5)
         mock_win.wait.assert_called_once_with("visible", timeout=5)
 
     def test_is_element_visible(self):

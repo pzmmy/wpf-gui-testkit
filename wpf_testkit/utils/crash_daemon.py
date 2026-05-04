@@ -82,11 +82,11 @@ class CrashDaemon:
             self.screenshot_dir, f"crash_{self.crash_time}.txt"
         )
         with open(crash_log, "w", encoding="utf-8") as f:
-            f.write(f"=== 崩溃检测报告 ===\n")
+            f.write("=== 崩溃检测报告 ===\n")
             f.write(f"时间: {self.crash_time}\n")
             f.write(f"进程: {self.process_name}\n")
             f.write(f"最后 PID: {self.last_pid}\n")
-            f.write(f"状态: 进程意外退出\n")
+            f.write("状态: 进程意外退出\n")
         self.crash_log = crash_log
 
     def _capture_crash_screen(self) -> None:
