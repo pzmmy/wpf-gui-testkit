@@ -72,6 +72,16 @@ class ControlsPage(BasePage):
         """等待 UI 渲染完成。"""
         time.sleep(seconds)
 
+    @staticmethod
+    def wait_until(condition_fn, timeout: float = 5.0, interval: float = 0.2) -> bool:
+        """轮询等待条件成立。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if condition_fn():
+                return True
+            time.sleep(interval)
+        return False
+
     # ════════════════════════════════════════════
     # ToggleButton
     # ════════════════════════════════════════════
@@ -83,6 +93,10 @@ class ControlsPage(BasePage):
     def toggle_bluetooth(self):
         """点击 Bluetooth ToggleButton。"""
         self.click_element(self.TOGGLE_BLUETOOTH)
+
+    def is_wifi_on(self) -> bool:
+        """Wi-Fi ToggleButton 是否为 ON。"""
+        return self.get_element(self.TOGGLE_WIFI).get_toggle_state() == 1
 
     def get_toggle_status(self) -> str:
         """获取 ToggleButton 状态文本。"""
@@ -119,6 +133,17 @@ class ControlsPage(BasePage):
         except (ValueError, TypeError):
             return -1
 
+    def set_slider_value(self, value: int):
+        """通过键盘输入设置 Slider 值。"""
+        ctrl = self.window.child_window(auto_id=self.SLIDER_VOLUME)
+        ctrl.set_focus()
+        # 用 Home 到最小值，然后 Right 步进
+        ctrl.type_keys("{HOME}")
+        self.wait_short(0.1)
+        for _ in range(value):
+            ctrl.type_keys("{RIGHT}")
+        self.wait_short(0.2)
+
     # ════════════════════════════════════════════
     # Expander
     # ════════════════════════════════════════════
@@ -133,13 +158,14 @@ class ControlsPage(BasePage):
 
     def wait_expander_state(self, expected_state: str, timeout: float = 5.0):
         """轮询等待 Expander 到达指定状态（Expanded/Collapsed）。"""
-        deadline = time.time() + timeout
-        while time.time() < deadline:
-            status = self.get_expander_status()
-            if expected_state in status:
-                return True
-            time.sleep(0.2)
-        return False
+        return self.wait_until(
+            lambda: expected_state in self.get_expander_status(),
+            timeout=timeout, interval=0.2,
+        )
+
+    def click_auto_update_checkbox(self):
+        """点击 Expander 内的 AutoUpdate CheckBox。"""
+        self.click_element(self.CHK_AUTO_UPDATE)
 
     # ════════════════════════════════════════════
     # DatePicker
@@ -150,10 +176,11 @@ class ControlsPage(BasePage):
         return self.get_text(self.TXT_DATE_STATUS)
 
     def select_date(self, date_str: str):
-        """通过键盘输入选中日期（格式 yyyy-MM-dd）。"""
+        """通过键盘输入选中日期。"""
         ctrl = self.window.child_window(auto_id=self.DATE_PICKER_START)
         ctrl.set_focus()
-        ctrl.type_keys("^{HOME}")  # Ctrl+Home 选中全部
+        # 用 Ctrl+A 全选后输入，不依赖区域格式
+        ctrl.type_keys("^a")
         self.wait_short(0.1)
         ctrl.type_keys(date_str)
         self.wait_short(0.1)
@@ -174,3 +201,21 @@ class ControlsPage(BasePage):
     def get_progress_status(self) -> str:
         """获取 ProgressBar 状态文本。"""
         return self.get_text(self.TXT_PROGRESS_STATUS)
+
+    def wait_progress_stopped(self, timeout: float = 10.0) -> bool:
+        """等待 ProgressBar 停止推进（100% 或不变）。"""
+        last_val = -1
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            status = self.get_progress_status()
+            try:
+                cur = int(status.replace("%", ""))
+            except (ValueError, TypeError):
+                return False
+            if cur >= 100:
+                return True
+            if cur == last_val:
+                return True  # 停止（Button 被点停）
+            last_val = cur
+            time.sleep(0.3)
+        return False

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.5 (2026-05-04)
+
+- 🆕 **测爷第二轮评审修复** — 覆盖缺口全部补齐（5 项，0🔴）
+  - ProgressBar 自动停止验证：从 0% 启动 → 等跑到 100% 自动停止 → Reset（P1）
+  - Slider 边界值：`set_slider_value(0)` 和 `set_slider_value(100)`（P2，{HOME}+{RIGHT} 步进）
+  - Expander 内 CheckBox 点击：展开后点击 `ChkAutoUpdate`（P1）
+  - DatePicker 区域格式：`select_date` 改用 `^a`（Ctrl+A）全选替代 `^{HOME}`，不依赖区域格式（🟢）
+  - Page Object 新增：`wait_until()` 通用轮询、`set_slider_value()`、`wait_progress_stopped()`、
+    `click_auto_update_checkbox()`、`is_wifi_on()`
+  - 测试总数：P0(7) + P1(6) + P2(5) = **18 测试用例**
+
 ## v0.4.4 (2026-05-04)
 
 - 🐛 **测爷评审修复** — 修复 P3 测试分析的 5 项问题（0 🔴 / 4 🟡 / 1 🟢）

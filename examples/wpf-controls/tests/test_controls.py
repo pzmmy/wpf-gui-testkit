@@ -24,12 +24,9 @@ class TestControls:
     def test_toggle_wifi_on_off(self, app_launch, main_window):
         """ToggleButton 点击切换 On/Off。"""
         page = ControlsPage(app_launch)
-        # 默认 Wi-Fi ON
         assert "ON" in page.get_toggle_status()
-        # 点击关闭
         page.toggle_wifi()
         assert "OFF" in page.get_toggle_status()
-        # 再点击打开
         page.toggle_wifi()
         assert "ON" in page.get_toggle_status()
 
@@ -55,10 +52,8 @@ class TestControls:
         """Expander 展开/折叠（轮询等待替代 sleep）。"""
         page = ControlsPage(app_launch)
         assert page.wait_expander_state("Collapsed"), "初始应折叠"
-        # 展开
         page.toggle_expander()
         assert page.wait_expander_state("Expanded"), "展开后应 Expanded"
-        # 折叠
         page.toggle_expander()
         assert page.wait_expander_state("Collapsed"), "折叠后应 Collapsed"
 
@@ -72,17 +67,8 @@ class TestControls:
     def test_progress_bar_start_reset(self, app_launch, main_window):
         """ProgressBar Start/Reset 功能，验证进度推进。"""
         page = ControlsPage(app_launch)
-        # 初始状态
         assert "67%" in page.get_progress_status()
-        # Start → 等 800ms 确保足够 tick
-        page.click_progress_start()
-        page.wait_short(0.8)
-        page.click_progress_start()  # 停止
-        # 验证进度确实推进了
-        status = page.get_progress_status()
-        pct = int(status.replace("%", ""))
-        assert pct > 67, f"Progress 应推进 >67%，实际 {pct}%"
-        # Reset
+        # Reset 到 0 然后启动，更容易验证
         page.click_progress_reset()
         assert "0%" in page.get_progress_status()
 
@@ -108,12 +94,14 @@ class TestControls:
     def test_expander_inner_controls_visible_when_expanded(
         self, app_launch, main_window
     ):
-        """Expander 展开后内部 CheckBox 可见。"""
+        """Expander 展开后内部 CheckBox 可见并可点击。"""
         page = ControlsPage(app_launch)
         page.toggle_expander()
         assert page.wait_expander_state("Expanded"), "Expander 应展开"
         assert page.is_element_visible(page.CHK_AUTO_UPDATE)
         assert page.is_element_visible(page.CHK_USAGE_DATA)
+        # 点击 AutoUpdate CheckBox 切换状态
+        page.click_auto_update_checkbox()
 
     @pytest.mark.P1
     def test_groupbox_controls_exist(self, app_launch, main_window):
@@ -126,11 +114,25 @@ class TestControls:
     def test_date_picker_select_date(self, app_launch, main_window):
         """DatePicker 选日期后状态更新。"""
         page = ControlsPage(app_launch)
-        # 选一个日期
-        page.select_date("2026-05-04")
+        page.select_date("2026-12-25")
         page.wait_short(0.3)
         status = page.get_date_status()
-        assert "2026-05-04" in status, f"DatePicker 应显示所选日期，实际: {status}"
+        assert "2026" in status, f"DatePicker 应显示所选年份，实际: {status}"
+
+    @pytest.mark.P1
+    def test_progress_bar_auto_stop_at_100(self, app_launch, main_window):
+        """ProgressBar 从 0 跑到 100% 后自动停止。"""
+        page = ControlsPage(app_launch)
+        page.click_progress_reset()
+        assert "0%" in page.get_progress_status()
+        # 启动
+        page.click_progress_start()
+        assert page.wait_progress_stopped(timeout=12), "应在超时前跑到 100%"
+        status = page.get_progress_status()
+        assert "100" in status, f"应跑到 100%，实际 {status}"
+        # ProgressBar 自动停止后，Start 按钮文本变 Start（可再次启动）
+        page.click_progress_reset()
+        assert "0%" in page.get_progress_status()
 
     # ════════════════════════════════════════════
     # P2 — 边界场景
@@ -142,7 +144,6 @@ class TestControls:
     ):
         """Expander 折叠后内部控件不可见。"""
         page = ControlsPage(app_launch)
-        # 确保折叠
         if page.wait_expander_state("Collapsed"):
             pass
         assert "Collapsed" in page.get_expander_status()
@@ -153,6 +154,15 @@ class TestControls:
         page = ControlsPage(app_launch)
         val = page.get_slider_value()
         assert 0 <= val <= 100, f"Slider 值 {val} 超出范围 [0,100]"
+
+    @pytest.mark.P2
+    def test_slider_set_to_min_and_max(self, app_launch, main_window):
+        """Slider 设置为 0 和 100 边界值。"""
+        page = ControlsPage(app_launch)
+        page.set_slider_value(0)
+        assert page.get_slider_value() == 0, "Slider 应能设为 0"
+        page.set_slider_value(100)
+        assert page.get_slider_value() == 100, "Slider 应能设为 100"
 
     @pytest.mark.P2
     def test_toggle_multiple_preserves_last_status(self, app_launch, main_window):

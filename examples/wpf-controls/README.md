@@ -51,26 +51,30 @@ pytest test_controls.py -v
 | test_toggle_wifi_on_off | ToggleButton | Click → On/Off → On |
 | test_radio_button_selection | RadioButton | Light → Dark → System |
 | test_slider_initial_value | Slider | Default value is 50 |
-| test_expander_toggle | Expander | Expand → Collapsed → Expanded |
-| test_date_picker_exists | DatePicker | Control exists |
-| test_progress_bar_start_reset | ProgressBar | Start then Reset to 0% |
+| test_expander_toggle | Expander | Expand → Collapsed → Expanded (polling) |
+| test_date_picker_exists | DatePicker | Initial state shows "No date selected" |
+| test_progress_bar_start_reset | ProgressBar | Reset to 0%, verify initial state |
 
-### P1 — Interaction Details (4 tests)
+### P1 — Interaction Details (6 tests)
 
 | Test | Control | Description |
 |------|---------|-------------|
 | test_all_toggles_exist | ToggleButton ×3 | All three present |
 | test_toolbar_buttons_exist | ToolBar | New/Save/Delete buttons exist |
-| test_expander_inner_controls_visible_when_expanded | Expander → CheckBox | Inner controls appear on expand |
+| test_expander_inner_controls_visible_when_expanded | Expander → CheckBox | Inner controls appear, CheckBox clickable |
 | test_groupbox_controls_exist | GroupBox | CheckBox + ComboBox inside |
+| test_date_picker_select_date | DatePicker | Select date via keyboard, verify status |
+| test_progress_bar_auto_stop_at_100 | ProgressBar | Start → auto-stop at 100% → Reset |
 
-### P2 — Edge Cases (3 tests)
+### P2 — Edge Cases (5 tests)
 
 | Test | Control | Description |
 |------|---------|-------------|
 | test_expander_inner_controls_hidden_when_collapsed | Expander | Status shows Collapsed |
 | test_slider_bounds | Slider | Value within [0, 100] |
+| test_slider_set_to_min_and_max | Slider | Set to 0 and 100 boundaries |
 | test_toggle_multiple_preserves_last_status | ToggleButton | Status reflects latest toggle |
+| test_combo_language_exists | ComboBox | Language combo exists |
 
 ## UI Control Reference
 
