@@ -4,19 +4,19 @@
 [![Python](https://img.shields.io/pypi/pyversions/wpf-gui-testkit)](https://pypi.org/project/wpf-gui-testkit/)
 [![License](https://img.shields.io/pypi/l/wpf-gui-testkit)](LICENSE)
 
-**极简 WPF GUI 自动化测试框架 — `pip install` 即用，零外部服务依赖。**
+**通用 WPF GUI 自动化测试框架 — `pip install` 即用，零外部服务依赖。**
 
-基于 Python + pywinauto (UIA backend) + pytest，不需要 WinAppDriver 或其他外部服务。
+基于 Python + pywinauto (UIA backend) + pytest，不需要 WinAppDriver、Appium 或其他外部服务。
 
 ---
 
 ## 特点
 
-- 🎯 **四级点击兜底** — `click() → click_input() → invoke() → set_focus + ENTER`，覆盖所有 WPF 控件模板
+- 🎯 **四级点击兜底** — `click() → click_input() → invoke() → set_focus + ENTER`，覆盖所有 WPF 控件模板（Button/RadioButton/ToggleButton/ListBoxItem 等）
 - 🛡️ **崩溃守护** — 自动检测被测应用意外退出，记录截图和日志
 - 📸 **失败自动截图** — 测试失败时自动保存桌面截图
-- 🧹 **进程隔离** — 每条用例独立启动/清理，不留残留
-- 🔌 **零服务依赖** — 不需要 WinAppDriver、Selenium Grid 或其他外部服务
+- 🧹 **进程隔离** — 每条用例独立启动/清理，不留残留进程或配置
+- 🔌 **零服务依赖** — 不需要 WinAppDriver、Appium、Selenium Grid 或其他外部服务
 
 ## 安装
 
@@ -26,58 +26,80 @@ pip install wpf-gui-testkit
 
 ## 快速开始
 
-### 1. 创建测试文件 `test_app.py`
+### 1. 创建 Page Object `main_page.py`
 
 ```python
-import pytest
 from wpf_testkit.core.base_page import BasePage
 
 
-class MainPage(BasePage):
+class LoginPage(BasePage):
+    """用户登录窗口 Page Object（示例）。"""
+
     @property
     def window(self):
         if self._window is None:
-            self._window = self.app.window(auto_id="MainView")
+            self._window = self.app.window(auto_id="MainWindow")
         return self._window
 
-    def click_play(self):
-        self.click_element("BtnPlay")
+    def enter_username(self, text: str):
+        self.set_text("TxtUsername", text)
+
+    def enter_password(self, text: str):
+        self.set_text("TxtPassword", text)
+
+    def click_login(self):
+        self.click_element("BtnLogin")
+
+    def get_status_text(self) -> str:
+        return self.get_text("TxtStatus")
+```
+
+### 2. 创建测试文件 `test_login.py`
+
+```python
+import pytest
+from main_page import LoginPage
 
 
-class TestApp:
-    def test_app_launch(self, main_window):
-        """验证应用启动后主窗口存在"""
+class TestLogin:
+    def test_window_launch(self, main_window):
+        """验证主窗口启动后可见。"""
         assert main_window.exists()
         assert main_window.is_visible()
 
-    def test_play_button(self, app_launch, main_window):
-        """验证播放按钮可点击"""
-        page = MainPage(app_launch)
-        page.click_play()
-        assert main_window.child_window(auto_id="BtnPlay").is_enabled()
+    def test_login_form(self, app_launch, main_window):
+        """验证表单交互：输入凭据 → 点击登录 → 检查状态。"""
+        page = LoginPage(app_launch)
+        page.enter_username("admin")
+        page.enter_password("123456")
+        page.click_login()
+        page.wait_element_visible("TxtStatus", timeout=5)
+        assert "成功" in page.get_status_text()
 ```
 
-### 2. 配置环境变量
+### 3. 配置环境变量
 
 ```bash
-# 被测应用路径
-set WPF_TEST_APP_PATH=C:\path\to\YourApp.exe
+# 被测应用路径（必填）
+set WPF_TEST_APP_PATH=C:\path\to\YourWpfApp.exe
 
-# 被测应用进程名（用于崩溃检测）
-set WPF_TEST_APP_PROCESS_NAME=YourApp.exe
+# 被测应用进程名（用于崩溃检测和进程清理）
+set WPF_TEST_APP_PROCESS_NAME=YourWpfApp.exe
 
-# 主窗口 AutomationId（默认 MainView）
-set WPF_TEST_MAIN_WINDOW_ID=MainView
+# 主窗口 AutomationProperties.AutomationId
+set WPF_TEST_MAIN_WINDOW_ID=MainWindow
 
-# AppData 清理目录名
-set WPF_TEST_APP_DATA_DIR=YourApp
+# %APPDATA% 下的应用数据目录名（可选，用于测试间清理残留配置）
+set WPF_TEST_APP_DATA_DIR=YourWpfApp
 ```
 
-### 3. 运行测试
+### 4. 运行测试
 
 ```bash
-pytest test_app.py -v
+pytest test_login.py -v
 ```
+
+---
 
 ## 项目结构
 
@@ -92,7 +114,7 @@ wpf-gui-testkit/
 │   └── utils/
 │       ├── crash_daemon.py    # 崩溃守护线程（每 2 秒检测进程存活）
 │       ├── screenshot.py      # 截图管理器（全屏/ROI/失败截图 + 自动清理）
-│       ├── uia_helpers.py     # UIA 辅助工具
+│       ├── uia_helpers.py     # UIA 辅助工具（控件树转储、窗口查找）
 │       └── dpi_utils.py       # DPI 缩放适配
 ├── examples/
 │   └── wpf-calculator/        # 示例：.NET 8 WPF 计算器（14 测试用例）
@@ -107,9 +129,9 @@ wpf-gui-testkit/
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `WPF_TEST_APP_PATH` | (必填) | 被测应用.exe 的完整路径 |
+| `WPF_TEST_APP_PATH` | (必填) | 被测应用 `.exe` 的完整路径 |
 | `WPF_TEST_APP_PROCESS_NAME` | `app.exe` | 被测应用进程名（用于崩溃检测和进程清理） |
-| `WPF_TEST_APP_DATA_DIR` | (空) | `%APPDATA%` 下的应用数据目录名（清理用） |
+| `WPF_TEST_APP_DATA_DIR` | (空) | `%APPDATA%` 下的应用数据目录名（测试间清理用） |
 | `WPF_TEST_MAIN_WINDOW_ID` | `MainWindow` | 主窗口 `AutomationProperties.AutomationId` |
 
 ## API 参考
@@ -126,6 +148,8 @@ wpf-gui-testkit/
 | `set_text(auto_id, text, timeout=10)` | 文本框输入 |
 | `get_text(auto_id)` | 获取控件文本 |
 | `is_element_visible(auto_id)` | 判断控件是否可见 |
+| `get_element_rectangle(auto_id)` | 获取控件矩形区域 |
+| `invoke_command(command_name, command_mapping=None)` | 通过 UIA InvokePattern 触发 WPF Command |
 | `screenshot(name, save_dir)` | 保存窗口截图 |
 | `assert_element_exists(auto_id)` | 断言控件存在 |
 | `assert_element_text_contains(auto_id, expected)` | 断言文本包含 |
@@ -140,7 +164,7 @@ wpf-gui-testkit/
 
 `examples/wpf-calculator/` 提供了完整的实战示例：
 - 被测应用：.NET 8 WPF 计算器（14 个 P0/P1/P2 分级测试用例）
-- Page Object：`pages/wpf_calculator_page.py`
+- Page Object：`tests/pages/wpf_calculator_page.py`
 - 测试用例：`tests/test_calculator.py`
 
 ```bash

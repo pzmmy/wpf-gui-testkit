@@ -20,10 +20,9 @@ from pywinauto import Application
 
 
 # 可环境变量覆盖：WPF_TEST_APP_PATH
-APP_PATH = os.environ.get(
-    "WPF_TEST_APP_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "..", "dist", "app.exe")
-)
+APP_PATH = os.environ.get("WPF_TEST_APP_PATH")
+if not APP_PATH:
+    APP_PATH = ""  # 启动时会报 FileNotFoundError，见 app_launch fixture
 
 # 可环境变量覆盖：WPF_TEST_APP_PROCESS_NAME
 APP_PROCESS_NAME = os.environ.get("WPF_TEST_APP_PROCESS_NAME", "app.exe")
