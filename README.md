@@ -120,8 +120,11 @@ wpf-gui-testkit/
 │   ├── wpf-calculator/        # 示例：.NET 9 WPF 计算器（14 测试用例）
 │   │   ├── WpfCalculator/     # 被测应用源码（C#）
 │   │   └── tests/             # GUI 测试（pytest）
-│   └── wpf-contacts/          # 示例：.NET 9 WPF 通讯录（13 测试用例，覆盖多种控件）
-│       ├── WpfContacts/       # 被测应用源码（C#）
+│   ├── wpf-contacts/          # 示例：.NET 9 WPF 通讯录（13 测试用例，覆盖多种控件）
+│   │   ├── WpfContacts/       # 被测应用源码（C#）
+│   │   └── tests/             # GUI 测试（pytest）
+│   └── wpf-controls/          # 示例：.NET 9 WPF 控件展示（14 测试用例）
+│       ├── WpfControls/       # 被测应用源码（C#）
 │       └── tests/             # GUI 测试（pytest）
 ├── pyproject.toml
 ├── README.md
@@ -333,9 +336,9 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
 
 | 时机 | 操作 | 说明 |
 |------|------|------|
-| 首次运行 | 自动创建 baseline | 不失败，仅记录基准图 |
-| 正常 CI | 对比 baseline | 差异 > 5% 自动失败 |
-| UI 改版后 | 手动更新 baseline | 删除旧 baseline 重新跑一次即可 |
+| 首次运行 | 自动创建 baseline | 测试通过，baseline 已保存 |
+| 正常运行 | 对比 baseline | 差异 > 5% 自动失败 |
+| UI 改版后 | `pytest --update-baseline` | 强制更新所有 baseline |
 
 ## 已知限制
 

@@ -5,6 +5,7 @@
 - session_cleanup — 进程 + AppData 自动清理
 - crash_daemon — 崩溃监控
 - screenshot_manager — 失败自动截图
+- --update-baseline 命令行选项
 """
 from __future__ import annotations
 
@@ -222,3 +223,22 @@ def pytest_runtest_makereport(item, call):
     outcome = yield
     rep = outcome.get_result()
     setattr(item, "rep_" + rep.when, rep)
+
+
+# ── 命令行选项 ──
+
+
+def pytest_addoption(parser):
+    """添加命令行选项。"""
+    parser.addoption(
+        "--update-baseline",
+        action="store_true",
+        default=False,
+        help="强制更新视觉回归测试的 baseline 截图（覆盖旧 baseline）",
+    )
+
+
+def pytest_configure(config):
+    """将 --update-baseline 标志存入全局。"""
+    from wpf_testkit.utils import visual_diff
+    visual_diff.UPDATE_BASELINE = config.getoption("--update-baseline")

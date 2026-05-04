@@ -1,5 +1,24 @@
 # Changelog
 
+## v0.4.2 (2026-05-04)
+
+- 🆕 **新示例：WPF 控件展示（wpf-controls）** — 覆盖 10+ 控件类型，14 测试用例
+  - ToggleButton (×3): Wi-Fi/Bluetooth/Airplane On/Off 切换
+  - RadioButton (×3): Light/Dark/System 主题选择
+  - Slider: 音量滑块 + 值显示
+  - Expander: 展开/折叠 + 内含 CheckBox 可见性
+  - DatePicker: 日期选择 + 状态文本
+  - ProgressBar: Start/Reset 功能
+  - ToolBar + Separator: 工具栏容器
+  - GroupBox: 分组容器内含 ComboBox + CheckBox
+  - 控件类型对比（P0: 7 / P1: 4 / P2: 3）
+- 🆕 **截图 baseline 管理自动化** — `pytest --update-baseline` 选项
+  - conftest 新增 `pytest_addoption` / `pytest_configure` 注册 `--update-baseline`
+  - visual_diff.py 新增 `UPDATE_BASELINE` 全局标志
+  - `visual_regression_fixture` 在 `--update-baseline` 时强制更新 baseline
+  - UI 改版后只需 `pytest --update-baseline` 即可刷新所有基准图
+- 📝 README 中英文版：新增 wpf-controls 到项目结构、`--update-baseline` 到工作流表
+
 ## v0.4.1 (2026-05-04)
 
 - 🐛 **Calculator 测试修复** — 4 个失败全部归零（14/14 通过）

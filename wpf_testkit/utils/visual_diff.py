@@ -174,6 +174,10 @@ class VisualDiff:
 
 # ── pytest fixture ─────────────────────────────────────────
 
+# 由 conftest.pytest_configure 设置，--update-baseline 时强制更新
+UPDATE_BASELINE = False
+
+
 def visual_regression_fixture(screenshot_manager, window,
                               baseline_name: str,
                               threshold: float = 0.05,
@@ -193,6 +197,7 @@ def visual_regression_fixture(screenshot_manager, window,
             assert vd.within_threshold(0.05), vd.summary()
 
     首次运行时 baseline 不存在不会失败，会自动创建 baseline。
+    传入 --update-baseline 时强制更新 baseline（抛弃旧 baseline）。
     """
     os.makedirs(baseline_dir, exist_ok=True)
     baseline_path = os.path.join(baseline_dir, f"{baseline_name}.png")
@@ -201,6 +206,12 @@ def visual_regression_fixture(screenshot_manager, window,
     shot_path = screenshot_manager.capture(window, f"visreg_{baseline_name}")
 
     vd = VisualDiff()
+
+    # --update-baseline 模式：强制更新，不比较
+    if UPDATE_BASELINE:
+        vd.update_baseline(shot_path, baseline_path)
+        return DiffResult(shot_path, baseline_path)  # 视为通过
+
     result = vd.compare(shot_path, baseline_path)
 
     # 首次运行：没有 baseline，自动创建

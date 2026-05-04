@@ -120,7 +120,8 @@ wpf-gui-testkit/
 │       └── dpi_utils.py       # DPI scaling
 ├── examples/
 │   ├── wpf-calculator/        # Calculator demo (14 tests)
-│   └── wpf-contacts/          # Contacts manager demo (13 tests)
+│   ├── wpf-contacts/          # Contacts manager demo (13 tests)
+│   └── wpf-controls/          # Controls showcase demo (14 tests)
 ├── pyproject.toml
 ├── README.md
 ├── README.en.md
@@ -371,8 +372,8 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
 | When | Action | Note |
 |------|--------|------|
 | First run | Auto-creates baseline | Test passes, baseline saved |
-| Normal CI | Compares against baseline | Fails if diff > 5% |
-| After UI redesign | Manually update baseline | Delete old baseline and re-run |
+| Normal run | Compares against baseline | Fails if diff > 5% |
+| After UI redesign | `pytest --update-baseline` | Force-updates all baselines |
 
 ## Known Limitations
 
