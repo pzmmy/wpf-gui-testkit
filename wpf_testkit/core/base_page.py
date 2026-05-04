@@ -67,6 +67,8 @@ class BasePage:
         try:
             ctrl.click()
         except (AttributeError, NotImplementedError):
+            ctrl.click_input()
+        except Exception:
             try:
                 ctrl.click_input()
             except Exception:

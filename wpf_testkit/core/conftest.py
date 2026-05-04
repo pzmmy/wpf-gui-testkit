@@ -88,8 +88,14 @@ def clean_appdata() -> None:
 @pytest.fixture(scope="session", autouse=True)
 def session_cleanup() -> Generator:
     """Session 级清理（全局一次）。"""
-    clean_appdata()
     kill_all_app()
+    clean_appdata()
+    # 在 session 开始时初始化 COM
+    import ctypes
+    try:
+        ctypes.windll.ole32.CoInitializeEx(None, 2)
+    except Exception:
+        pass
     yield
     kill_all_app()
 
@@ -106,10 +112,21 @@ def app_launch() -> Application:
     app = Application(backend="uia")
     app.start(APP_PATH, timeout=20)
 
-    # 等待主窗口出现
-    main = app.window(auto_id=MAIN_WINDOW_ID)
-    main.wait("visible", timeout=15)
-    time.sleep(1)
+    # 等窗口创建
+    time.sleep(3)
+
+    # 通过 Win32 API 关闭引导页（如存在）
+    import ctypes
+    try:
+        user32 = ctypes.windll.user32
+        hwnd = user32.FindWindowW(None, "简听 · 快速上手")
+        if hwnd:
+            user32.PostMessageW(hwnd, 0x0010, 0, 0)
+            time.sleep(0.5)
+    except Exception:
+        pass
+
+    time.sleep(2)
 
     yield app
 
@@ -130,6 +147,16 @@ def app_connect() -> Application:
 @pytest.fixture
 def main_window(app_launch: Application):
     """启动应用并返回主窗口。"""
+    from pywinauto import Desktop
+    desktop = Desktop(backend="uia")
+    for _ in range(15):
+        win = desktop.window(auto_id=MAIN_WINDOW_ID)
+        try:
+            if win.exists():
+                return win
+        except Exception:
+            pass
+        time.sleep(1)
     return app_launch.window(auto_id=MAIN_WINDOW_ID)
 
 
