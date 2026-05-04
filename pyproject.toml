@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wpf-gui-testkit"
-version = "0.3.0"
+version = "0.4.0"
 description = "通用 WPF GUI 自动化测试框架 — pip install 即用，零外部服务依赖"
 readme = "README.md"
 license = { text = "MIT" }

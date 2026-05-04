@@ -157,6 +157,25 @@ wpf-gui-testkit/
 | `assert_element_exists(auto_id)` | 断言控件存在 |
 | `assert_element_text_contains(auto_id, expected)` | 断言文本包含 |
 
+### `VisualDiff(diff_output_dir="screenshots/diffs")`
+
+| 方法 | 说明 |
+|------|------|
+| `compare(candidate_path, baseline_path)` → `DiffResult` | 比较截图，返回包含差异统计和阈值判定的结果 |
+| `update_baseline(candidate_path, baseline_path)` | 将当前截图更新为新基准 |
+
+### `DiffResult`
+
+| 属性 | 说明 |
+|------|------|
+| `diff_pct` | 差异像素百分比 (0.0 ~ 1.0) |
+| `diff_count` | 差异像素数 |
+| `max_diff` | 单像素最大差异 (0~255) |
+| `diff_image_path` | 差异高亮图路径（红色标记差异区域） |
+| `passed` | baseline 存在且尺寸匹配 |
+| `within_threshold(threshold)` | 差异是否在阈值内（默认 5%） |
+| `summary()` | 人类可读摘要 |
+
 ## 如何让 WPF 应用可测试
 
 wpf-gui-testkit 依赖 UI Automation (UIA) 框架来识别控件。WPF 项目默认支持 UIA，但有几个关键点需要配合。
@@ -278,6 +297,44 @@ settings.close()
 
 5. **Visibility=Collapsed 控件不可查找**
    `Visibility=Collapsed` 的控件 UIA 不暴露 auto_id。需要在同一父级下直接查找子控件，或先让控件可见。
+
+## 视觉回归测试（L3）
+
+wpf-gui-testkit 内置了基于 PIL 的截图比对引擎，用于捕获 UI 外观变化。
+
+### 基本用法
+
+```python
+from wpf_testkit.utils.visual_diff import VisualDiff
+
+def test_visual_regression(app_launch, main_window, screenshot_manager):
+    # 1. 截图
+    shot = screenshot_manager.capture(main_window, "main_window")
+
+    # 2. 与 baseline 对比
+    vd = VisualDiff()
+    result = vd.compare(shot, "screenshots/baseline/main_window.png")
+
+    # 3. 首次运行自动创建 baseline（不会失败）
+    if result.baseline_missing:
+        vd.update_baseline(shot, "screenshots/baseline/main_window.png")
+        return
+
+    # 4. 断言差异在阈值内
+    assert result.within_threshold(0.05), result.summary()
+```
+
+### 生成差异高亮图
+
+`compare()` 方法自动在 `screenshots/diffs/` 目录生成差异高亮图（红色半透明标记差异区域），方便人工审查。
+
+### 使用场景
+
+| 时机 | 操作 | 说明 |
+|------|------|------|
+| 首次运行 | 自动创建 baseline | 不失败，仅记录基准图 |
+| 正常 CI | 对比 baseline | 差异 > 5% 自动失败 |
+| UI 改版后 | 手动更新 baseline | 删除旧 baseline 重新跑一次即可 |
 
 ## 已知限制
 

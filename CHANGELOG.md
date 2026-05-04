@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.0 (2026-05-04)
+
+- 🆕 **视觉回归引擎（L3）** — `visual_diff.py`，零额外依赖
+  - `VisualDiff.compare()` — 像素级差异计算（PIL ImageChops）
+  - `DiffResult` — 差异统计（pct/count/max_diff）+ 阈值判定
+  - 自动生成差异高亮图（红色标注差异区域）
+  - `update_baseline()` — 首次运行自动创建基准
+  - 18 个自测覆盖全部路径（含边界：缺失/尺寸/全同/全异/部分差异）
+- 📝 README 新增：L3 视觉回归使用说明 + VisualDiff/DiffResult API 参考
+
 ## v0.3.0 (2026-05-04)
 
 - 🆕 **新示例：WPF 通讯录（wpf-contacts）** — 覆盖更多控件类型

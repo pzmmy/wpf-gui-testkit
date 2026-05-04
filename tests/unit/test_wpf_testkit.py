@@ -1,6 +1,6 @@
 """wpf_testkit 框架自测 — 纯逻辑测试，不依赖真实 WPF 窗口。
 
-所有 pywinauto/PIL 调用均被 mock，可在无 Windows UIA 环境（如 WSL、CI）运行。
+pywinauto 调用被 mock，可在无 Windows UIA 环境（如 WSL、CI）运行。
 """
 from __future__ import annotations
 
@@ -11,22 +11,19 @@ from unittest.mock import MagicMock, patch, PropertyMock
 
 import pytest
 
-# ─── 在导入被测试模块前 mock 掉平台依赖 ──────────────────
+# ─── 在导入被测试模块前 mock pywinauto ──────────────────
+# 注意：不 mock PIL，避免影响同进程中的 test_visual_diff.py
 
-sys.modules["PIL"] = MagicMock()
-sys.modules["PIL.Image"] = MagicMock()
 sys.modules["pywinauto"] = MagicMock()
 sys.modules["pywinauto.Desktop"] = MagicMock()
 sys.modules["pywinauto.Application"] = MagicMock()
 sys.modules["pywinauto.timings"] = MagicMock()
 sys.modules["pywinauto.timings.Timings"] = MagicMock()
-# 导入 pywinauto 后让它返回一个可用的 class，不是 MagicMock
 import pywinauto
 
 
 class FakeAppClass:
-    """伪造的 pywinauto.Application 类，不是 MagicMock 实例，
-    这样 isinstance(x, Application) 和 MagicMock(spec=Application) 都能工作。"""
+    """伪造的 pywinauto.Application 类。"""
     pass
 
 
