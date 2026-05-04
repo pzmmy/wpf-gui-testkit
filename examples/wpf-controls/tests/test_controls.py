@@ -4,7 +4,6 @@
 DatePicker, ProgressBar, ToolBar, GroupBox, ComboBox, CheckBox.
 """
 import pytest
-import time
 from wpf_testkit.core.conftest import *  # noqa: F403  # 提供 app_launch, main_window
 from pages.wpf_controls_page import ControlsPage
 
@@ -53,18 +52,15 @@ class TestControls:
 
     @pytest.mark.P0
     def test_expander_toggle(self, app_launch, main_window):
-        """Expander 展开/折叠。"""
+        """Expander 展开/折叠（轮询等待替代 sleep）。"""
         page = ControlsPage(app_launch)
-        # 初始折叠
-        assert "Collapsed" in page.get_expander_status()
+        assert page.wait_expander_state("Collapsed"), "初始应折叠"
         # 展开
         page.toggle_expander()
-        time.sleep(0.3)
-        assert "Expanded" in page.get_expander_status()
+        assert page.wait_expander_state("Expanded"), "展开后应 Expanded"
         # 折叠
         page.toggle_expander()
-        time.sleep(0.3)
-        assert "Collapsed" in page.get_expander_status()
+        assert page.wait_expander_state("Collapsed"), "折叠后应 Collapsed"
 
     @pytest.mark.P0
     def test_date_picker_exists(self, app_launch, main_window):
@@ -80,7 +76,7 @@ class TestControls:
         assert "67%" in page.get_progress_status()
         # Start → 等 800ms 确保足够 tick
         page.click_progress_start()
-        time.sleep(0.8)
+        page.wait_short(0.8)
         page.click_progress_start()  # 停止
         # 验证进度确实推进了
         status = page.get_progress_status()
@@ -114,9 +110,8 @@ class TestControls:
     ):
         """Expander 展开后内部 CheckBox 可见。"""
         page = ControlsPage(app_launch)
-        # 展开
         page.toggle_expander()
-        time.sleep(0.5)
+        assert page.wait_expander_state("Expanded"), "Expander 应展开"
         assert page.is_element_visible(page.CHK_AUTO_UPDATE)
         assert page.is_element_visible(page.CHK_USAGE_DATA)
 
@@ -126,6 +121,16 @@ class TestControls:
         page = ControlsPage(app_launch)
         assert page.is_element_visible(page.CHK_NOTIFY)
         assert page.is_element_visible(page.COMBO_LANGUAGE)
+
+    @pytest.mark.P1
+    def test_date_picker_select_date(self, app_launch, main_window):
+        """DatePicker 选日期后状态更新。"""
+        page = ControlsPage(app_launch)
+        # 选一个日期
+        page.select_date("2026-05-04")
+        page.wait_short(0.3)
+        status = page.get_date_status()
+        assert "2026-05-04" in status, f"DatePicker 应显示所选日期，实际: {status}"
 
     # ════════════════════════════════════════════
     # P2 — 边界场景
@@ -138,11 +143,8 @@ class TestControls:
         """Expander 折叠后内部控件不可见。"""
         page = ControlsPage(app_launch)
         # 确保折叠
-        if "Expanded" in page.get_expander_status():
-            page.toggle_expander()
-            time.sleep(0.3)
-        # 初始折叠状态下，Expander 内的 checkbox 不可被 UIA 定位
-        # 直接验证外部状态
+        if page.wait_expander_state("Collapsed"):
+            pass
         assert "Collapsed" in page.get_expander_status()
 
     @pytest.mark.P2
@@ -158,5 +160,10 @@ class TestControls:
         page = ControlsPage(app_launch)
         page.toggle_wifi()
         status = page.get_toggle_status()
-        # 状态应该反映 Wi-Fi
         assert "Wi-Fi" in status
+
+    @pytest.mark.P2
+    def test_combo_language_exists(self, app_launch, main_window):
+        """ComboBox 语言选择控件存在。"""
+        page = ControlsPage(app_launch)
+        assert page.is_element_visible(page.COMBO_LANGUAGE)

@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.4.4 (2026-05-04)
+
+- 🐛 **测爷评审修复** — 修复 P3 测试分析的 5 项问题（0 🔴 / 4 🟡 / 1 🟢）
+  - 新增 `DatePicker` 选择日期测试（P1），覆盖核心交互路径（🔴 覆盖缺口）
+  - 新增 `ComboBox` 存在性测试（🔴 覆盖缺口，降级为 P2）
+  - `Expander` 测试中用 `wait_expander_state()` 轮询替代 `time.sleep(0.3)`（🟡 flaky 风险）
+  - 两个 `time.sleep(0.3)` → `page.wait_short(0.3)`（🟡 命名统一）
+  - Page Object 新增 `select_date()`、`wait_short()`、`wait_expander_state()` 方法
+  - 测爷误报：ToolBar 按钮无 Click 事件不是编译问题（有意设计，仅测存在性）
+
 ## v0.4.3 (2026-05-04)
 
 - 🐛 **审爷评审修复** — 修复 P3 新增代码的 8 项问题（0 🔴 / 4 🟡 / 4 🟢）

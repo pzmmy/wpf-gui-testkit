@@ -3,6 +3,7 @@
 涵盖控件类型：ToggleButton, RadioButton, Slider, Expander,
 DatePicker, ProgressBar, ToolBar, GroupBox, ComboBox, CheckBox.
 """
+import time
 from wpf_testkit.core.base_page import BasePage
 
 
@@ -64,6 +65,13 @@ class ControlsPage(BasePage):
     def window(self):
         return self._window
 
+    # ── 帮助方法 ──
+
+    @staticmethod
+    def wait_short(seconds: float = 0.3):
+        """等待 UI 渲染完成。"""
+        time.sleep(seconds)
+
     # ════════════════════════════════════════════
     # ToggleButton
     # ════════════════════════════════════════════
@@ -123,6 +131,16 @@ class ControlsPage(BasePage):
         """获取 Expander 状态文本。"""
         return self.get_text(self.TXT_EXPANDER_STATUS)
 
+    def wait_expander_state(self, expected_state: str, timeout: float = 5.0):
+        """轮询等待 Expander 到达指定状态（Expanded/Collapsed）。"""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            status = self.get_expander_status()
+            if expected_state in status:
+                return True
+            time.sleep(0.2)
+        return False
+
     # ════════════════════════════════════════════
     # DatePicker
     # ════════════════════════════════════════════
@@ -130,6 +148,16 @@ class ControlsPage(BasePage):
     def get_date_status(self) -> str:
         """获取 DatePicker 状态文本。"""
         return self.get_text(self.TXT_DATE_STATUS)
+
+    def select_date(self, date_str: str):
+        """通过键盘输入选中日期（格式 yyyy-MM-dd）。"""
+        ctrl = self.window.child_window(auto_id=self.DATE_PICKER_START)
+        ctrl.set_focus()
+        ctrl.type_keys("^{HOME}")  # Ctrl+Home 选中全部
+        self.wait_short(0.1)
+        ctrl.type_keys(date_str)
+        self.wait_short(0.1)
+        ctrl.type_keys("{ENTER}")
 
     # ════════════════════════════════════════════
     # ProgressBar
