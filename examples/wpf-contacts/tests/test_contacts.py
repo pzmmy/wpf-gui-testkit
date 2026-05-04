@@ -59,7 +59,6 @@ class TestCore:
     def test_add_contact(self, app_launch, main_window):
         """添加新联系人：弹出对话框 → 填写 → 保存 → 列表更新。"""
         page = ContactsPage(app_launch)
-        old_count = page.get_status_text()
 
         page.click_add()
         time.sleep(0.5)

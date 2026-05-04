@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.4.3 (2026-05-04)
+
+- 🐛 **审爷评审修复** — 修复 P3 新增代码的 8 项问题（0 🔴 / 4 🟡 / 4 🟢）
+  - `pytest_configure` 加 `@pytest.hookimpl(tryfirst=True)` 保护（🟡）
+  - `UPDATE_BASELINE` 改为有条件赋值，避免 `getoption` 在非 pytest 环境中抛异常（🟡）
+  - `test_progress_bar_start_reset` 增加进度推进验证 + sleep 延至 0.8s（🟡）
+  - `visual_regression_fixture` → `visual_regression_check` 重命名（🟡 命名误导）
+  - `test_date_picker_exists` 断言从 `"selected"` 改为 `"No date selected"`（🟢 过宽断言）
+  - `ToggleWifi` → `ToggleWiFi` PascalCase 统一（🟢）
+  - `ControlsPage.__init__` 预置 `_window`，去除惰性加载（🟢 性能优化）
+  - README 中英文版新增 xdist 不兼容文档（🟢）
+- 🔧 **ruff lint 清理** — 整个项目 `ruff check` 全部通过
+  - 修复 `time` 未使用导入（calculator test）、`old_count` 未使用变量（contacts test）
+  - 统一 `# noqa: F403` 写法到所有测试文件
+
 ## v0.4.2 (2026-05-04)
 
 - 🆕 **新示例：WPF 控件展示（wpf-controls）** — 覆盖 10+ 控件类型，14 测试用例

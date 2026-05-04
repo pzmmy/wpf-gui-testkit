@@ -345,6 +345,7 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
 - **WPF `AllowsTransparency=True` 的窗口** — UIA `InvokePattern` 可能无法触发 WPF Command 绑定。建议在 XAML 中使用 `Click` 事件处理器 + `BeginInvoke` 替代 `Command` 绑定
 - **窗口 `WindowStyle=None`** — 需自定义关闭按钮和拖拽事件，UIA 查找窗口时用 `auto_id` 而非 `title`
 - **中文编码** — 在命令行运行需 `set PYTHONIOENCODING=utf-8`
+- **视觉回归 + `pytest-xdist`** — baseline 目录不适用于并发写入。不要对 `--update-baseline` 或视觉回归测试使用 `-n auto`
 
 ## 示例
 

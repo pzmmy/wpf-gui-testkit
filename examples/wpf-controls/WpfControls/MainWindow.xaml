@@ -30,7 +30,7 @@
                        AutomationProperties.AutomationId="LblToggleHeader"/>
             <WrapPanel>
                 <ToggleButton Content="Wi-Fi"
-                              AutomationProperties.AutomationId="ToggleWifi"
+                              AutomationProperties.AutomationId="ToggleWiFi"
                               Margin="2" Width="100" Height="32"
                               IsChecked="True"
                               Checked="Toggle_Checked"

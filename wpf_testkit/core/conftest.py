@@ -238,7 +238,9 @@ def pytest_addoption(parser):
     )
 
 
+@pytest.hookimpl(tryfirst=True)
 def pytest_configure(config):
     """将 --update-baseline 标志存入全局。"""
     from wpf_testkit.utils import visual_diff
-    visual_diff.UPDATE_BASELINE = config.getoption("--update-baseline")
+    if config.getoption("--update-baseline", default=False):
+        visual_diff.UPDATE_BASELINE = True

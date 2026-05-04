@@ -13,7 +13,7 @@ class ControlsPage(BasePage):
     WINDOW = "MainWindow"
 
     # ── ToggleButton ──
-    TOGGLE_WIFI = "ToggleWifi"
+    TOGGLE_WIFI = "ToggleWiFi"
     TOGGLE_BLUETOOTH = "ToggleBluetooth"
     TOGGLE_AIRPLANE = "ToggleAirplane"
     TXT_TOGGLE_STATUS = "TxtToggleStatus"
@@ -56,10 +56,12 @@ class ControlsPage(BasePage):
     COMBO_LANGUAGE = "ComboLanguage"
     TXT_GROUPBOX_STATUS = "TxtGroupBoxStatus"
 
+    def __init__(self, app):
+        super().__init__(app)
+        self._window = self.app.window(auto_id=self.WINDOW)
+
     @property
     def window(self):
-        if self._window is None:
-            self._window = self.app.window(auto_id=self.WINDOW)
         return self._window
 
     # ════════════════════════════════════════════

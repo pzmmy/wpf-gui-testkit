@@ -6,7 +6,7 @@ A WPF controls showcase demo, covering 10+ control types for `wpf-gui-testkit` f
 
 | Control | AutomationId | Test Verification |
 |---------|-------------|-------------------|
-| ToggleButton (×3) | `ToggleWifi`, `ToggleBluetooth`, `ToggleAirplane` | Click toggle On/Off, existence |
+| ToggleButton (×3) | `ToggleWiFi`, `ToggleBluetooth`, `ToggleAirplane` | Click toggle On/Off, existence |
 | RadioButton (×3) | `RadioLight`, `RadioDark`, `RadioSystem` | Selection switching |
 | Slider | `SliderVolume` | Initial value, bounds |
 | Expander | `ExpanderAdvanced` | Expand/collapse, inner controls visibility |
@@ -77,7 +77,7 @@ pytest test_controls.py -v
 | AutomationId | Control Type | Purpose |
 |-------------|-------------|---------|
 | `MainWindow` | Window | Main window |
-| `ToggleWifi` | ToggleButton | Wi-Fi on/off |
+| `ToggleWiFi` | ToggleButton | Wi-Fi on/off |
 | `ToggleBluetooth` | ToggleButton | Bluetooth on/off |
 | `ToggleAirplane` | ToggleButton | Airplane mode on/off |
 | `TxtToggleStatus` | TextBlock | Toggle status display |

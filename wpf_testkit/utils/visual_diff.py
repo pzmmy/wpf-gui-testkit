@@ -178,19 +178,19 @@ class VisualDiff:
 UPDATE_BASELINE = False
 
 
-def visual_regression_fixture(screenshot_manager, window,
+def visual_regression_check(screenshot_manager, window,
                               baseline_name: str,
                               threshold: float = 0.05,
                               baseline_dir: str = "screenshots/baseline"):
     """
-    视觉回归 fixture：截图 → 对比 baseline → 断言。
+    视觉回归检查：截图 → 对比 baseline → 断言。
 
     使用方式（在 conftest.py 或测试文件中注册 fixture）：
 
-        from wpf_testkit.utils.visual_diff import visual_regression_fixture
+        from wpf_testkit.utils.visual_diff import visual_regression_check
 
         def test_main_window(app_launch, main_window, screenshot_manager):
-            vd = visual_regression_fixture(
+            vd = visual_regression_check(
                 screenshot_manager, main_window,
                 baseline_name="main_window",
             )

@@ -380,6 +380,7 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
 - **WPF `AllowsTransparency=True` windows** — UIA `InvokePattern` may fail to trigger WPF Command bindings. Use `Click` event + `BeginInvoke` instead.
 - **Window `WindowStyle=None`** — Requires custom close button and drag events. Use `auto_id` for window lookup, not `title`.
 - **Chinese encoding** — On Windows, run `set PYTHONIOENCODING=utf-8` before pytest.
+- **Visual regression + `pytest-xdist`** — Baseline directory is not safe for parallel writes. Do not use `-n auto` with `--update-baseline` or visual regression tests.
 
 ## Examples
 

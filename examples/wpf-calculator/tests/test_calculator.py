@@ -7,8 +7,7 @@
 - UI 验证
 """
 import pytest
-import time
-from wpf_testkit.core.conftest import *  # noqa: 提供 app_launch, main_window
+from wpf_testkit.core.conftest import *  # noqa: F403  # 提供 app_launch, main_window
 from pages.wpf_calculator_page import CalculatorPage
 
 

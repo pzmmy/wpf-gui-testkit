@@ -5,7 +5,7 @@ DatePicker, ProgressBar, ToolBar, GroupBox, ComboBox, CheckBox.
 """
 import pytest
 import time
-from wpf_testkit.core.conftest import *  # noqa
+from wpf_testkit.core.conftest import *  # noqa: F403  # 提供 app_launch, main_window
 from pages.wpf_controls_page import ControlsPage
 
 
@@ -68,20 +68,24 @@ class TestControls:
 
     @pytest.mark.P0
     def test_date_picker_exists(self, app_launch, main_window):
-        """DatePicker 控件存在。"""
+        """DatePicker 控件存在，初始状态为 No date selected。"""
         page = ControlsPage(app_launch)
-        assert "selected" in page.get_date_status()
+        assert "No date selected" in page.get_date_status()
 
     @pytest.mark.P0
     def test_progress_bar_start_reset(self, app_launch, main_window):
-        """ProgressBar Start/Reset 功能。"""
+        """ProgressBar Start/Reset 功能，验证进度推进。"""
         page = ControlsPage(app_launch)
         # 初始状态
         assert "67%" in page.get_progress_status()
-        # Start
+        # Start → 等 800ms 确保足够 tick
         page.click_progress_start()
-        time.sleep(0.5)
-        page.click_progress_start()
+        time.sleep(0.8)
+        page.click_progress_start()  # 停止
+        # 验证进度确实推进了
+        status = page.get_progress_status()
+        pct = int(status.replace("%", ""))
+        assert pct > 67, f"Progress 应推进 >67%，实际 {pct}%"
         # Reset
         page.click_progress_reset()
         assert "0%" in page.get_progress_status()
