@@ -130,7 +130,7 @@ wpf-gui-testkit/
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `WPF_TEST_APP_PATH` | (必填) | 被测应用 `.exe` 的完整路径 |
-| `WPF_TEST_APP_PROCESS_NAME` | `app.exe` | 被测应用进程名（用于崩溃检测和进程清理） |
+| `WPF_TEST_APP_PROCESS_NAME` | `app.exe` | 被测应用进程名（用于崩溃检测和进程清理，含子进程递归杀） |
 | `WPF_TEST_APP_DATA_DIR` | (空) | `%APPDATA%` 下的应用数据目录名（测试间清理用） |
 | `WPF_TEST_MAIN_WINDOW_ID` | `MainWindow` | 主窗口 `AutomationProperties.AutomationId` |
 
@@ -153,6 +153,128 @@ wpf-gui-testkit/
 | `screenshot(name, save_dir)` | 保存窗口截图 |
 | `assert_element_exists(auto_id)` | 断言控件存在 |
 | `assert_element_text_contains(auto_id, expected)` | 断言文本包含 |
+
+## 如何让 WPF 应用可测试
+
+wpf-gui-testkit 依赖 UI Automation (UIA) 框架来识别控件。WPF 项目默认支持 UIA，但有几个关键点需要配合。
+
+### AutomationId 命名规范
+
+每个可交互控件必须设置 `AutomationProperties.AutomationId`，否则 UIA 无法精准定位：
+
+```xaml
+<!-- ✅ 正确：有明确的 AutomationId -->
+<Button AutomationProperties.AutomationId="BtnLogin" Content="登录" />
+<TextBox AutomationProperties.AutomationId="TxtUsername" />
+<ComboBox AutomationProperties.AutomationId="ComboCity" />
+<Slider AutomationProperties.AutomationId="SliderVolume" />
+<CheckBox AutomationProperties.AutomationId="ChkRemember" />
+
+<!-- ❌ 错误：UIA 只能靠文本/索引模糊查找，测试脆弱 -->
+<Button Content="登录" />
+<TextBox />
+```
+
+**命名惯例：**
+| 控件类型 | 前缀 | 示例 |
+|---------|------|------|
+| Button | `Btn` | `BtnLogin`, `BtnSave`, `BtnCancel` |
+| TextBox | `Txt` | `TxtUsername`, `TxtPassword` |
+| ComboBox | `Combo` | `ComboCategory`, `ComboLanguage` |
+| Slider | `Slider` | `SliderVolume`, `SliderBrightness` |
+| CheckBox | `Chk` | `ChkRemember`, `ChkAgree` |
+| RadioButton | `Radio` | `RadioMale`, `RadioFemale` |
+| TextBlock | `Txt`（作为标签） | `TxtStatus`, `TxtTitle` |
+| ListBox/ListView | `List` | `ListStations`, `ListResults` |
+| 顶层窗口 | `Window` | `MainWindow`, `SettingsWindow` |
+
+### 子窗口定位
+
+如果被测应用有弹出窗口（设置、关于、对话框），这些子窗口没有主窗口的 auto_id，需要通过标题定位：
+
+```python
+# 点击打开设置
+main_page.click_element("BtnSettings")
+time.sleep(0.5)
+
+# 按标题找到子窗口
+settings = main_page.app.window(title="设置")
+assert settings.exists(), "设置窗口未弹出"
+
+# 操作子窗口内的控件
+checkbox = settings.child_window(title="启用通知", control_type="CheckBox")
+checkbox.click_input()
+
+# 关闭子窗口
+settings.close()
+```
+
+### 窗口样式与 UIA 兼容性
+
+| 窗口属性 | 影响 | 解决方案 |
+|---------|------|---------|
+| `WindowStyle=None` | UIA 按标题查找可能失败 | 优先用 `auto_id` 查找窗口 |
+| `AllowsTransparency=True` | UIA `InvokePattern` **无法触发** Button 的 Command 绑定 | 见下文详细说明 |
+| `Topmost=True` | 覆盖层拦截 UIA 点击 | 测试前先关闭覆盖窗口 |
+
+### Avoid Pitfalls
+
+1. **AllowsTransparency + Command 绑定失效**
+   当 `WindowStyle=None` + `AllowsTransparency=True` 时，WPF 分层窗口的路由事件系统与 UIA `InvokePattern` 交互存在 BUG。`click()`、`click_input()`、`invoke()`、`set_focus+ENTER` 均无法触发按钮的 `Command` 绑定。
+   
+   解决方案：在 XAML 中改用 `Click` 事件，code-behind 通过 `Dispatcher.BeginInvoke` 转发到 ViewModel：
+   
+   ```xaml
+   <!-- ❌ 不可测试 -->
+   <Button Command="{Binding OpenSettingsCommand}" />
+   
+   <!-- ✅ 可测试 -->
+   <Button Click="OnSettingsClick" />
+   ```
+   
+   ```csharp
+   private void OnSettingsClick(object sender, RoutedEventArgs e)
+   {
+       Dispatcher.BeginInvoke(new Action(() =>
+       {
+           if (DataContext is ViewModels.MainViewModel vm)
+               vm.OpenSettingsCommand.Execute(null);
+       }));
+   }
+   ```
+
+2. **引导页/弹出层覆盖主界面**
+   如果应用首次启动有引导页（`Topmost=True`），它会覆盖主界面使点击穿透。在 `app_launch` fixture 中关闭它：
+   
+   ```python
+   try:
+       guide = app.window(auto_id="GuideView")
+       if guide.exists():
+           guide.close()
+           time.sleep(0.5)
+   except:
+       pass
+   ```
+
+3. **中文编码导致窗口查找失败**
+   从 WSL/CI 运行 Windows Python 时，stdout 编码默认为 GBK。中文窗口标题会乱码，需要用 UTF-8 模式：
+   ```bash
+   set PYTHONIOENCODING=utf-8
+   pytest -v
+   ```
+
+4. **ComboBox 没有 select() 方法**
+   WPF ComboBox 不支持 `select()`，用键盘操作替代：
+   ```python
+   combo = main_window.child_window(auto_id="ComboCity")
+   combo.set_focus()
+   combo.type_keys("%{DOWN}")  # Alt+↓ 展开列表
+   combo.type_keys("{DOWN}")   # 选择下一项
+   combo.type_keys("{ENTER}")
+   ```
+
+5. **Visibility=Collapsed 控件不可查找**
+   `Visibility=Collapsed` 的控件 UIA 不暴露 auto_id。需要在同一父级下直接查找子控件，或先让控件可见。
 
 ## 已知限制
 

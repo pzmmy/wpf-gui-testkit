@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.0 (2026-05-04)
+
+- 🔧 **进程清理增强** — `kill_all_app()` 递归杀子进程 + 超时保护，防止 WPF 子进程残留
+- ✅ **框架自测（32 用例全部通过）** — 为 exceptions/screenshot/crash_daemon/base_page/uia_helpers 编写 pytest，mock 掉平台依赖，可在无 Windows UIA 环境的 CI 中运行
+- 📝 **WPF 测试配合指南** — README 新增 AutomationId 命名规范、子窗口定位、窗口样式兼容性、Avoid Pitfalls（AllowsTransparency+Command 失效、引导页覆盖、中文编码、ComboBox 操作等）
+- 🔧 环境变量表说明更新（子进程递归杀）
+
 ## v0.1.1 (2026-05-04)
 
 - 📝 **README 重写**：快速开始示例改为通用表单场景（之前偏媒体播放器）

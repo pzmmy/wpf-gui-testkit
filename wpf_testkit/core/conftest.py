@@ -38,13 +38,30 @@ MAIN_WINDOW_ID = os.environ.get("WPF_TEST_MAIN_WINDOW_ID", "MainWindow")
 
 
 def kill_all_app() -> None:
-    """强制结束所有被测应用进程。"""
+    """强制结束所有被测应用进程（含子进程），带超时保护。"""
+    timeout = 5  # 单进程最多等 5 秒
+    targeted_pids = []
+
     for proc in psutil.process_iter(["name", "pid"]):
         try:
             if proc.info["name"] and proc.info["name"].lower() == APP_PROCESS_NAME.lower():
-                p = psutil.Process(proc.info["pid"])
-                p.kill()
-                p.wait(timeout=5)
+                targeted_pids.append(proc.info["pid"])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+
+    for pid in targeted_pids:
+        try:
+            parent = psutil.Process(pid)
+            # 递归杀子进程（WPF 常驻子进程如 background thread 等）
+            children = parent.children(recursive=True)
+            for child in children:
+                try:
+                    child.kill()
+                    child.wait(timeout=timeout)
+                except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                    pass
+            parent.kill()
+            parent.wait(timeout=timeout)
         except (psutil.NoSuchProcess, psutil.TimeoutExpired):
             pass
     time.sleep(1)
