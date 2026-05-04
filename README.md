@@ -117,8 +117,11 @@ wpf-gui-testkit/
 │       ├── uia_helpers.py     # UIA 辅助工具（控件树转储、窗口查找）
 │       └── dpi_utils.py       # DPI 缩放适配
 ├── examples/
-│   └── wpf-calculator/        # 示例：.NET 8 WPF 计算器（14 测试用例）
-│       ├── WpfCalculator/     # 被测应用源码（C#）
+│   ├── wpf-calculator/        # 示例：.NET 9 WPF 计算器（14 测试用例）
+│   │   ├── WpfCalculator/     # 被测应用源码（C#）
+│   │   └── tests/             # GUI 测试（pytest）
+│   └── wpf-contacts/          # 示例：.NET 9 WPF 通讯录（13 测试用例，覆盖多种控件）
+│       ├── WpfContacts/       # 被测应用源码（C#）
 │       └── tests/             # GUI 测试（pytest）
 ├── pyproject.toml
 ├── README.md
@@ -282,16 +285,35 @@ settings.close()
 - **窗口 `WindowStyle=None`** — 需自定义关闭按钮和拖拽事件，UIA 查找窗口时用 `auto_id` 而非 `title`
 - **中文编码** — 在命令行运行需 `set PYTHONIOENCODING=utf-8`
 
-## 示例：WPF 计算器
+## 示例
 
-`examples/wpf-calculator/` 提供了完整的实战示例：
-- 被测应用：.NET 8 WPF 计算器（14 个 P0/P1/P2 分级测试用例）
+### WPF 计算器
+
+`examples/wpf-calculator/` 提供了基准测试示例：
+- 被测应用：.NET 9 WPF 计算器（14 个 P0/P1/P2 分级测试用例）
 - Page Object：`tests/pages/wpf_calculator_page.py`
 - 测试用例：`tests/test_calculator.py`
+
+覆盖控件类型：Button（数字/运算符）、TextBlock（显示屏）
 
 ```bash
 cd examples/wpf-calculator
 set WPF_TEST_APP_PATH=C:\path\to\WpfCalculator.exe
+pytest -v
+```
+
+### WPF 通讯录
+
+`examples/wpf-contacts/` 提供了高级控件测试示例：
+- 被测应用：.NET 9 WPF 通讯录管理器（13 个 P0/P1/P2 分级测试用例）
+- Page Object：`tests/pages/wpf_contacts_page.py`
+- 测试用例：`tests/test_contacts.py`
+
+覆盖控件类型：TextBox（搜索框+表单）、ListView+GridView（列表）、ComboBox、对话框窗口、StatusBar
+
+```bash
+cd examples/wpf-contacts
+set WPF_TEST_APP_PATH=C:\path\to\WpfContacts.exe
 pytest -v
 ```
 

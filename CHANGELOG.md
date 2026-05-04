@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.0 (2026-05-04)
+
+- 🆕 **新示例：WPF 通讯录（wpf-contacts）** — 覆盖更多控件类型
+  - ListView + GridView（联系人列表）
+  - TextBox 实时搜索过滤
+  - ComboBox（分组选择）
+  - 对话框窗口（ContactDialog：新增/编辑）
+  - StatusBar / TextBlock 状态显示
+  - 分层 P0/P1/P2 测试，共 **13 个测试用例**
+- 🔧 更新 README 项目结构
+
 ## v0.2.0 (2026-05-04)
 
 - 🔧 **进程清理增强** — `kill_all_app()` 递归杀子进程 + 超时保护，防止 WPF 子进程残留
