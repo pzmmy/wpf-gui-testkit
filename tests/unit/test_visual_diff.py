@@ -196,6 +196,36 @@ class TestVisualDiffCompare:
         result = vd.compare(shot, baseline)
         assert result.within_threshold(0.05) is False  # 全部不同
 
+    def test_within_threshold_passes_when_semantic_acceptable(self, tmp_dir):
+        """像素超标但 Vision 语义分析标记为可接受时，within_threshold 应通过。"""
+        vd = VisualDiff(diff_output_dir=os.path.join(tmp_dir, "diffs"))
+        candidate = os.path.join(tmp_dir, "candidate.png")
+        baseline = os.path.join(tmp_dir, "baseline.png")
+        _create_image(100, 100, (255, 255, 255), candidate)
+        _create_image(100, 100, (0, 0, 0), baseline)
+
+        result = vd.compare(candidate, baseline)
+        # 像素 100% 不同
+        assert result.diff_pct == 1.0
+        # 但 semantic_acceptable 为 None 时仍不通过
+        assert result.within_threshold(0.05) is False
+        # 模拟 semantic_acceptable 为 True
+        result.semantic_acceptable = True
+        assert result.within_threshold(0.05) is True
+
+    def test_summary_with_semantic_hint(self, tmp_dir):
+        """摘要中应包含语义分析提示。"""
+        dr = DiffResult("a.png", "b.png")
+        dr.diff_pct = 0.10
+        dr.diff_count = 100
+        dr.total_pixels = 1000
+        dr.max_diff = 50
+        dr.semantic_diff = "非实质性差异：时间从14:30变为14:31"
+        dr.semantic_acceptable = True
+        s = dr.summary()
+        assert "Vision" in s
+        assert "非实质性差异" in s
+
 
 # ═══════════════════════════════════════════════════════
 # VisualDiff.update_baseline

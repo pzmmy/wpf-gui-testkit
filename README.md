@@ -8,20 +8,28 @@
 
 基于 Python + pywinauto (UIA backend) + pytest，不需要 WinAppDriver、Appium 或其他外部服务。
 
+可选扩展：支持阿里百炼 Qwen2.5-VL 多模态大模型，通过截图分析替代脆弱的 UIA 控件枚举。
+
 ---
 
 ## 特点
 
-- 🎯 **四级点击兜底** — `click() → click_input() → invoke() → set_focus + ENTER`，覆盖所有 WPF 控件模板（Button/RadioButton/ToggleButton/ListBoxItem 等）
-- 🛡️ **崩溃守护** — 自动检测被测应用意外退出，记录截图和日志
-- 📸 **失败自动截图** — 测试失败时自动保存桌面截图
+- 🎯 **五级点击兜底** — `click() → click_input() → invoke() → set_focus + ENTER → Vision 坐标定位`，覆盖所有 WPF 控件模板和分层窗口
+- 🛡️ **崩溃守护** — 自动检测被测应用意外退出，记录截图和日志，支持 Vision 自动分析崩溃对话框内容
+- 👁️ **Vision 语义断言** — 通过多模态大模型从截图直接验证 UI 状态（弹窗是否打开、播放器是否正在播放、录音状态、错误提示检测等）
+- 📸 **失败自动截图 + AI 分析** — 测试失败时自动保存截图并发送给 Vision 分析，结果写入同目录的 `_vision.txt`
 - 🧹 **进程隔离** — 每条用例独立启动/清理，不留残留进程或配置
 - 🔌 **零服务依赖** — 不需要 WinAppDriver、Appium、Selenium Grid 或其他外部服务
+- 🔄 **多模型供应商支持** — Provider Adapter 模式，可切换阿里百炼/MiniMax/DeepSeek/智谱/OpenAI 等任意多模态模型
 
 ## 安装
 
 ```bash
+# 核心框架（零额外依赖）
 pip install wpf-gui-testkit
+
+# 包含 Vision 多模态大模型支持
+pip install wpf-gui-testkit[vision]
 ```
 
 ## 快速开始
@@ -108,13 +116,16 @@ wpf-gui-testkit/
 ├── wpf_testkit/
 │   ├── __init__.py            # 版本号
 │   ├── exceptions.py          # 自定义异常（ElementNotFound, CommandInvoke, CrashDetected）
+│   ├── vision.py              # VisionAnalyzer + Provider Adapter（多模态大模型视觉分析）
 │   ├── core/
-│   │   ├── base_page.py       # Page Object 基类（四级点击兜底、等待、断言、截图）
+│   │   ├── base_page.py       # Page Object 基类（五级点击兜底、等待、断言、截图、Vision 语义断言）
 │   │   └── conftest.py        # pytest fixtures（app_launch, main_window, crash_daemon 等）
 │   └── utils/
-│       ├── crash_daemon.py    # 崩溃守护线程（每 2 秒检测进程存活）
-│       ├── screenshot.py      # 截图管理器（全屏/ROI/失败截图 + 自动清理）
-│       ├── uia_helpers.py     # UIA 辅助工具（控件树转储、窗口查找）
+│       ├── crash_daemon.py    # 崩溃守护线程（每 2 秒检测进程存活 + Vision 崩溃分析）
+│       ├── screenshot.py      # 截图管理器（全屏/ROI/失败截图 + Vision 自动分析 + 自动清理）
+│       ├── visual_diff.py     # 视觉回归引擎（像素级 diff + Vision 语义差异过滤误报）
+│       ├── uia_helpers.py     # UIA 辅助工具（控件树转储、窗口查找、Vision 控件描述增强）
+│       ├── win32_dialogs.py   # Win32 系统对话框自动化（Open/Save FileDialog）
 │       └── dpi_utils.py       # DPI 缩放适配
 ├── examples/
 │   ├── wpf-calculator/        # 示例：.NET 9 WPF 计算器（14 测试用例）
@@ -126,6 +137,10 @@ wpf-gui-testkit/
 │   └── wpf-controls/          # 示例：.NET 9 WPF 控件展示（14 测试用例）
 │       ├── WpfControls/       # 被测应用源码（C#）
 │       └── tests/             # GUI 测试（pytest）
+├── tests/
+│   └── unit/                  # 框架自测（纯逻辑，mock pywinauto，可在 WSL/CI 运行）
+│       ├── test_wpf_testkit.py  # 68 测试用例：exceptions/screenshot/crash_daemon/base_page/uia_helpers/vision
+│       └── test_visual_diff.py  # 12 测试用例：像素 diff + Vision 语义过滤
 ├── pyproject.toml
 ├── README.md
 └── LICENSE
@@ -140,35 +155,101 @@ wpf-gui-testkit/
 | `WPF_TEST_APP_DATA_DIR` | (空) | `%APPDATA%` 下的应用数据目录名（测试间清理用） |
 | `WPF_TEST_MAIN_WINDOW_ID` | `MainWindow` | 主窗口 `AutomationProperties.AutomationId` |
 | `WPF_TEST_GUIDE_WINDOW_TITLE` | (空) | 首次启动引导页窗口标题（自动关闭用） |
+| `ALIYUN_VISION_API_KEY` | (空) | Vision 多模态 API 密钥（[vision] 扩展使用） |
+| `VISION_API_URL` | `https://dashscope.aliyuncs.com/...` | Vision API 端点（可切换其他供应商） |
+| `VISION_MODEL` | `qwen2.5-vl-72b-instruct` | 多模态模型名称 |
 
 ## API 参考
 
-### `BasePage(app)`
+### `BasePage(app)` — Page Object 基类
+
+#### 等待
 
 | 方法 | 说明 |
 |------|------|
 | `wait_visible(timeout=15)` | 等待窗口可见 |
 | `wait_enabled(timeout=10)` | 等待窗口可用 |
 | `wait_element_visible(auto_id, timeout=10)` | 等待指定控件可见 |
-| `click_element(auto_id, timeout=10)` | 点击控件，自动四级降级 |
-| `click_input_element(auto_id, timeout=10)` | 用 `click_input` 方式点击 |
-| `set_text(auto_id, text, timeout=10)` | 文本框输入 |
-| `get_text(auto_id)` | 获取控件文本 |
-| `is_element_visible(auto_id)` | 判断控件是否可见 |
-| `get_element_rectangle(auto_id)` | 获取控件矩形区域 |
-| `invoke_command(command_name, command_mapping=None)` | 通过 UIA InvokePattern 触发 WPF Command |
-| `screenshot(name, save_dir)` | 保存窗口截图 |
-| `assert_element_exists(auto_id)` | 断言控件存在 |
-| `assert_element_text_contains(auto_id, expected)` | 断言文本包含 |
 
-### `VisualDiff(diff_output_dir="screenshots/diffs")`
+#### 点击操作
 
 | 方法 | 说明 |
 |------|------|
-| `compare(candidate_path, baseline_path)` → `DiffResult` | 比较截图，返回包含差异统计和阈值判定的结果 |
+| `click_element(auto_id, timeout=10, debug=False)` | 点击控件，自动五级降级 |
+| `click_input_element(auto_id, timeout=10)` | 用 `click_input` 方式点击 |
+| `click_by_vision(description, timeout=10)` | **Vision 驱动**：通过描述定位无 AutomationId 的控件并点击 |
+| `combo_select_by_text(auto_id, text, timeout=10)` | 从 ComboBox 中按键选择项 |
+
+#### 输入与读取
+
+| 方法 | 说明 |
+|------|------|
+| `set_text(auto_id, text)` | 文本框输入（Ctrl+A 清空后输入） |
+| `get_text(auto_id)` | 获取控件文本 |
+| `safe_text(ctrl)` | 安全获取控件文本，兼容 GBK 编码 |
+
+#### 判断与断言
+
+| 方法 | 说明 |
+|------|------|
+| `is_element_visible(auto_id)` | 判断控件是否可见 |
+| `get_element_rectangle(auto_id)` | 获取控件矩形区域 |
+| `invoke_command(command_name, command_mapping=None)` | 通过 UIA InvokePattern 触发 WPF Command |
+| `assert_element_exists(auto_id)` | 断言控件存在 |
+| `assert_element_text_contains(auto_id, expected)` | 断言文本包含 |
+
+#### Vision 语义断言（需 [vision] 扩展）
+
+| 方法 | 说明 |
+|------|------|
+| `vision_available` | 属性：Vision 是否可用 |
+| `vision_healthy_check()` | 启动时检测 Vision API 可用性 |
+| `vision_assert_dialog_open(dlg_name, timeout=10)` | 断言弹窗已打开（重试直到超时） |
+| `vision_assert_playing(timeout=10)` | 断言播放器正在播放 |
+| `vision_assert_recording(timeout=10)` | 断言正在录音 |
+| `vision_assert_no_error()` | 断言截图中没有错误提示 |
+| `vision_assert_dialog_closed(title, timeout=5)` | 断言弹窗已关闭 |
+| `vision_capture_and_analyze(prompt, name, save_dir)` | 截图 + Vision 分析 + 保存（截图+分析文本） |
+| `dump_controls_with_vision(fallback_on_empty=True)` | UIA 控件树 + Vision 描述（UIA 为 0 时自动启用） |
+
+### `VisionAnalyzer` — 多模态视觉分析器
+
+位于 `wpf_testkit/vision.py`，通过 Provider Adapter 模式支持任意多模态模型供应商。
+
+```python
+from wpf_testkit.vision import VisionAnalyzer, OpenAIVisionProvider
+
+# 方式一：默认（阿里百炼 Qwen2.5-VL，需配置环境变量）
+va = VisionAnalyzer()
+
+# 方式二：自定义 Provider（可切换任意 OpenAI 兼容 API）
+provider = OpenAIVisionProvider(
+    api_url="https://api.minimaxi.com/v1/chat/completions",
+    api_key="mm-xxx",
+    model="minimax-vl-01",
+)
+va = VisionAnalyzer(provider=provider)
+
+if va.available:
+    result = va.analyze(img, "描述这张截图")
+```
+
+| 方法 | 说明 |
+|------|------|
+| `analyze(img, prompt, max_tokens=1024, detail="high")` | 通用截图分析 |
+| `healthy_check()` | 检测 API 可用性（失败时自动禁用） |
+| `find_control(img, description)` | 通过文字描述定位控件坐标 |
+| `find_close_button(img)` | 定位关闭按钮坐标 |
+| `compare_semantic(candidate_img, baseline_img)` | 语义比较两张截图（过滤非功能性差异） |
+
+### `VisualDiff(diff_output_dir="screenshots/diffs")` — 视觉回归引擎
+
+| 方法 | 说明 |
+|------|------|
+| `compare(candidate_path, baseline_path)` → `DiffResult` | 比较截图（像素超标时自动 Vision 语义分析） |
 | `update_baseline(candidate_path, baseline_path)` | 将当前截图更新为新基准 |
 
-### `DiffResult`
+### `DiffResult` — 视觉回归结果
 
 | 属性 | 说明 |
 |------|------|
@@ -176,9 +257,99 @@ wpf-gui-testkit/
 | `diff_count` | 差异像素数 |
 | `max_diff` | 单像素最大差异 (0~255) |
 | `diff_image_path` | 差异高亮图路径（红色标记差异区域） |
+| `semantic_diff` | Vision 语义分析结果（像素超标时自动触发） |
+| `semantic_acceptable` | Vision 判定为非实质性差异（如时间/滚动变化） |
 | `passed` | baseline 存在且尺寸匹配 |
-| `within_threshold(threshold)` | 差异是否在阈值内（默认 5%） |
-| `summary()` | 人类可读摘要 |
+| `within_threshold(threshold)` | 差异是否在阈值内（默认 5%，含语义过滤） |
+| `summary()` | 人类可读摘要（含 Vision 语义提示） |
+
+### `ScreenshotManager(save_dir="screenshots")` — 截图管理器
+
+| 方法 | 说明 |
+|------|------|
+| `capture(window, name)` | 截取窗口/桌面截图 |
+| `capture_roi(window, name, region)` | 截取 ROI 区域 (x, y, w, h) |
+| `capture_failure(window, test_name)` | 失败截图 + **自动 Vision 分析** |
+| `cleanup_old(keep_days=7)` | 清理超过 N 天的截图 |
+
+### `CrashDaemon(process_name, main_window_id, screenshot_dir)` — 崩溃守护
+
+| 方法 | 说明 |
+|------|------|
+| `start()` | 启动守护线程（每 2 秒检测） |
+| `stop()` | 停止守护线程 |
+| `has_crashed` | 是否检测到崩溃 |
+| `crash_log` | 崩溃日志文件路径 |
+| `get_summary()` | 崩溃摘要（含 Vision 分析结果） |
+
+## How to use Vision 扩展（多模态大模型）
+
+### 配置
+
+```bash
+# 阿里百炼 API 密钥（必填）
+set ALIYUN_VISION_API_KEY=sk-xxx
+
+# 可选：切换其他供应商
+set VISION_API_URL=https://api.other-provider.com/v1/chat/completions
+set VISION_MODEL=other-vision-model
+```
+
+### Vision 第五级点击兜底
+
+当 UIA 的四级降级全部失败时（典型：分层窗口 `AllowsTransparency=True`），自动启用 Vision 坐标定位：
+
+```python
+page.click_element("BtnSettings")  # 自动五级降级，无需额外代码
+```
+
+### Vision 语义断言
+
+适合 UIA 无法获取状态的场景（如播放器按钮图标变化）：
+
+```python
+# 验证弹窗弹出（自动重试直到超时）
+page.vision_assert_dialog_open("设置", timeout=10)
+
+# 验证播放器正在播放
+page.vision_assert_playing()
+
+# 验证录音状态
+page.vision_assert_recording()
+
+# 一次性截图 + 分析 + 保存
+desc = page.vision_capture_and_analyze(
+    "描述这个对话框", name="about_dialog"
+)
+```
+
+### 失败自动 Vision 分析
+
+测试失败时，截图管理器自动将截图发给 Vision 分析，结果写入 `screenshots/failures/`：
+
+```
+screenshots/failures/test_login_failed_20260505_143022.png  # 原始截图
+screenshots/failures/test_login_failed_20260505_143022_vision.txt  # Vision 分析
+```
+
+### 崩溃自动 Vision 分析
+
+被测应用崩溃时，崩溃守护自动截图并分析错误对话框内容：
+
+```
+screenshots/crash_screen_20260505_143500.png              # 崩溃瞬间截图
+screenshots/crash_screen_20260505_143500_vision.txt        # Vision 分析
+```
+
+### 视觉回归语义过滤
+
+像素差异超标时自动 Vision 语义分析，过滤时钟/天气/滚动位置等非功能性误报：
+
+```python
+result = vd.compare("current.png", "baseline.png")
+# 像素超标但 Vision 判定为"非实质性差异"（如时间变化），still passes
+assert result.within_threshold(0.05), result.summary()
+```
 
 ## 如何让 WPF 应用可测试
 
@@ -240,38 +411,16 @@ settings.close()
 | 窗口属性 | 影响 | 解决方案 |
 |---------|------|---------|
 | `WindowStyle=None` | UIA 按标题查找可能失败 | 优先用 `auto_id` 查找窗口 |
-| `AllowsTransparency=True` | UIA `InvokePattern` **无法触发** Button 的 Command 绑定 | 见下文详细说明 |
+| `AllowsTransparency=True` | UIA `InvokePattern` **无法触发** Button 的 Command 绑定 | Vision 第五级点击兜底自动生效 |
 | `Topmost=True` | 覆盖层拦截 UIA 点击 | 测试前先关闭覆盖窗口 |
 
 ### Avoid Pitfalls
 
 1. **AllowsTransparency + Command 绑定失效**
-   当 `WindowStyle=None` + `AllowsTransparency=True` 时，WPF 分层窗口的路由事件系统与 UIA `InvokePattern` 交互存在 BUG。`click()`、`click_input()`、`invoke()`、`set_focus+ENTER` 均无法触发按钮的 `Command` 绑定。
-   
-   解决方案：在 XAML 中改用 `Click` 事件，code-behind 通过 `Dispatcher.BeginInvoke` 转发到 ViewModel：
-   
-   ```xaml
-   <!-- ❌ 不可测试 -->
-   <Button Command="{Binding OpenSettingsCommand}" />
-   
-   <!-- ✅ 可测试 -->
-   <Button Click="OnSettingsClick" />
-   ```
-   
-   ```csharp
-   private void OnSettingsClick(object sender, RoutedEventArgs e)
-   {
-       Dispatcher.BeginInvoke(new Action(() =>
-       {
-           if (DataContext is ViewModels.MainViewModel vm)
-               vm.OpenSettingsCommand.Execute(null);
-       }));
-   }
-   ```
+   当 `WindowStyle=None` + `AllowsTransparency=True` 时，WPF 分层窗口的路由事件系统与 UIA `InvokePattern` 交互存在 BUG。`click()`、`click_input()`、`invoke()`、`set_focus+ENTER` 均无法触发按钮的 `Command` 绑定。此时 **Vision 第五级兜底自动启用**，无需修改被测应用代码。
 
 2. **引导页/弹出层覆盖主界面**
    如果应用首次启动有引导页（`Topmost=True`），它会覆盖主界面使点击穿透。在 `app_launch` fixture 中关闭它：
-   
    ```python
    try:
        guide = app.window(auto_id="GuideView")
@@ -304,7 +453,7 @@ settings.close()
 
 ## 视觉回归测试（L3）
 
-wpf-gui-testkit 内置了基于 PIL 的截图比对引擎，用于捕获 UI 外观变化。
+wpf-gui-testkit 内置了基于 PIL 的截图比对引擎 + Vision 语义差异过滤。
 
 ### 基本用法
 
@@ -324,7 +473,7 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
         vd.update_baseline(shot, "screenshots/baseline/main_window.png")
         return
 
-    # 4. 断言差异在阈值内
+    # 4. 断言差异在阈值内（像素超标时自动 Vision 语义过滤）
     assert result.within_threshold(0.05), result.summary()
 ```
 
@@ -337,15 +486,16 @@ def test_visual_regression(app_launch, main_window, screenshot_manager):
 | 时机 | 操作 | 说明 |
 |------|------|------|
 | 首次运行 | 自动创建 baseline | 测试通过，baseline 已保存 |
-| 正常运行 | 对比 baseline | 差异 > 5% 自动失败 |
+| 正常运行 | 对比 baseline | 差异 > 5% 自动失败（Vision 语义过滤误报） |
 | UI 改版后 | `pytest --update-baseline` | 强制更新所有 baseline |
 
 ## 已知限制
 
-- **WPF `AllowsTransparency=True` 的窗口** — UIA `InvokePattern` 可能无法触发 WPF Command 绑定。建议在 XAML 中使用 `Click` 事件处理器 + `BeginInvoke` 替代 `Command` 绑定
+- **WPF `AllowsTransparency=True` 的窗口** — UIA `InvokePattern` 可能无法触发 WPF Command 绑定。Vision 第五级点击兜底自动处理此场景
 - **窗口 `WindowStyle=None`** — 需自定义关闭按钮和拖拽事件，UIA 查找窗口时用 `auto_id` 而非 `title`
 - **中文编码** — 在命令行运行需 `set PYTHONIOENCODING=utf-8`
 - **视觉回归 + `pytest-xdist`** — baseline 目录不适用于并发写入。不要对 `--update-baseline` 或视觉回归测试使用 `-n auto`
+- **Vision 依赖网络** — 多模态大模型需要稳定的互联网连接到 API 端点，网络问题会自动降级到传统 UIA 模式
 
 ## 示例
 

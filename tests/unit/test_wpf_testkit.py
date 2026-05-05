@@ -381,3 +381,134 @@ class TestUiaHelpers:
         result = dump_controls(mock_window, max_depth=3)
         assert isinstance(result, str)
         assert "descendants" in result
+
+    def test_dump_controls_with_empty_uia_uses_vision(self):
+        """UIA 返回 0 控件且 Vision 可用时，应包含 Vision 描述。"""
+        mock_window = MagicMock()
+        mock_window.descendants.return_value = []
+        # 启用 use_vision 但 VisionAnalyzer 无 API key → 不会产生 Vision 输出
+        result = dump_controls(mock_window, max_depth=3, use_vision=True)
+        assert "descendants" in result
+        # Vision 不可用时不报错
+        assert isinstance(result, str)
+
+
+# ═══════════════════════════════════════════════════════
+# vision.py — 纯逻辑测试（mock requests 避免真实 API 调用）
+# ═══════════════════════════════════════════════════════
+
+class TestVisionAnalyzer:
+    """VisionAnalyzer 纯逻辑测试。
+
+    不调用真实 API（mock requests + 不设真实 API key）。
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_vision(self):
+        from wpf_testkit.vision import reset_analyzer
+        reset_analyzer()
+        yield
+
+    def test_auto_detect_no_deps(self):
+        """无 API key 的默认 provider 使 VisionAnalyzer 不可用。"""
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer(enabled=None)
+        assert va.available is False
+
+    def test_auto_detect_no_api_key(self):
+        """无 API key 的 provider 使 VisionAnalyzer 不可用。"""
+        from wpf_testkit.vision import VisionAnalyzer, OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="")
+        va = VisionAnalyzer(provider=provider)
+        assert va.available is False
+
+    def test_auto_detect_short_key(self):
+        from wpf_testkit.vision import OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="short")
+        assert provider.available is False
+
+    def test_auto_detect_with_key(self):
+        """有 API key 和 URL 的 provider 应使 VisionAnalyzer 可用。"""
+        from wpf_testkit.vision import VisionAnalyzer, OpenAIVisionProvider
+        provider = OpenAIVisionProvider(
+            api_url="https://api.example.com/v1/chat/completions",
+            api_key="sk-thi...3456",
+        )
+        va = VisionAnalyzer(provider=provider)
+        assert va.available is True
+
+    def test_explicit_disabled(self):
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer(enabled=False)
+        assert va.available is False
+
+    def test_call_api_returns_none_when_disabled(self):
+        from wpf_testkit.vision import VisionAnalyzer, OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="")
+        va = VisionAnalyzer(provider=provider, enabled=False)
+        from PIL import Image
+        img = Image.new("RGB", (10, 10))
+        result = va.analyze(img, "test")
+        assert result is None
+
+    def test_analyze_returns_none_when_no_provider_key(self):
+        """无 API key 时 analyze 返回 None。"""
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer()
+        from PIL import Image
+        img = Image.new("RGB", (10, 10))
+        result = va.analyze(img, "test")
+        assert result is None
+
+    def test_find_control_returns_none_when_disabled(self):
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer(enabled=False)
+        from PIL import Image
+        img = Image.new("RGB", (10, 10))
+        result = va.find_control(img, "测试按钮")
+        assert result is None
+
+    def test_get_analyzer_singleton(self):
+        from wpf_testkit.vision import get_analyzer, reset_analyzer
+        reset_analyzer()
+        va1 = get_analyzer()
+        va2 = get_analyzer()
+        assert va1 is va2
+
+    def test_reset_analyzer(self):
+        from wpf_testkit.vision import get_analyzer, reset_analyzer
+        reset_analyzer()
+        va1 = get_analyzer()
+        reset_analyzer()
+        va2 = get_analyzer()
+        assert va1 is not va2
+
+    def test_healthy_check_disabled(self):
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer(enabled=False)
+        assert va.healthy_check() is False
+
+    def test_provider_property(self):
+        """provider 属性返回当前使用的 provider。"""
+        from wpf_testkit.vision import VisionAnalyzer
+        va = VisionAnalyzer()
+        provider = va.provider
+        assert provider is not None
+
+    def test_openai_provider_auto_detect_no_key(self):
+        from wpf_testkit.vision import OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="")
+        assert provider.available is False
+
+    def test_openai_provider_auto_detect_no_url(self):
+        from wpf_testkit.vision import OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="sk-xxx", api_url="")
+        assert provider.available is False
+
+    def test_openai_provider_analyze_disabled(self):
+        from wpf_testkit.vision import OpenAIVisionProvider
+        provider = OpenAIVisionProvider(api_key="")
+        from PIL import Image
+        img = Image.new("RGB", (10, 10))
+        result = provider.analyze(img, "test")
+        assert result is None

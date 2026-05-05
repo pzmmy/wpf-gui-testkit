@@ -1,7 +1,9 @@
 """wpf_testkit/utils/crash_daemon.py — 崩溃守护进程
 
 在测试执行期间监控被测应用进程状态，检测意外退出并记录现场。
+Vision 扩展：崩溃时截图自动发送给多模态大模型分析错误内容。
 """
+
 from __future__ import annotations
 
 import os
@@ -13,14 +15,14 @@ import psutil
 
 
 class CrashDaemon:
-    """崩溃守护线程：检测被测应用进程意外退出。
+    """崩溃守护线程：检测被测应用进程意外退出。"""
 
-    用于长时间运行测试中，一旦应用崩溃自动记录现场（截图 + 日志）。
-    """
-
-    def __init__(self, process_name: str = "app.exe",
-                 main_window_id: str = "MainWindow",
-                 screenshot_dir: str = "screenshots"):
+    def __init__(
+        self,
+        process_name: str = "app.exe",
+        main_window_id: str = "MainWindow",
+        screenshot_dir: str = "screenshots",
+    ):
         self.process_name = process_name
         self.main_window_id = main_window_id
         self.screenshot_dir = screenshot_dir
@@ -30,7 +32,19 @@ class CrashDaemon:
         self.last_pid: Optional[int] = None
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
-        self._stop_time: float = 0.0  # stop() 时记录时间戳，减少假阳性
+        self._stop_time: float = 0.0
+        # Vision 分析器
+        self._vision = None
+
+    def _get_vision(self):
+        if self._vision is None:
+            try:
+                from wpf_testkit.vision import get_analyzer
+
+                self._vision = get_analyzer()
+            except ImportError:
+                self._vision = False
+        return self._vision if self._vision else None
 
     def start(self) -> "CrashDaemon":
         """启动守护线程。"""
@@ -53,8 +67,10 @@ class CrashDaemon:
             for proc in psutil.process_iter(["pid", "name", "create_time"]):
                 try:
                     pinfo = proc.info
-                    if (pinfo["name"] and
-                            pinfo["name"].lower() == self.process_name.lower()):
+                    if (
+                        pinfo["name"]
+                        and pinfo["name"].lower() == self.process_name.lower()
+                    ):
                         found_pid = pinfo["pid"]
                         break
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -63,9 +79,7 @@ class CrashDaemon:
             if found_pid:
                 self.last_pid = found_pid
             elif self.last_pid is not None:
-                # 检查是否在 stop 时间附近（区分正常退出 vs 崩溃）
                 if self._stop_time > 0 and time.time() - self._stop_time < 3:
-                    # 3秒内的进程消失视为正常停止，不报告崩溃
                     break
                 self.crashed = True
                 self.crash_time = time.strftime("%Y%m%d_%H%M%S")
@@ -90,14 +104,44 @@ class CrashDaemon:
         self.crash_log = crash_log
 
     def _capture_crash_screen(self) -> None:
-        """崩溃时截取当前桌面。"""
+        """崩溃时截取当前桌面，并用 Vision 分析错误内容。"""
         try:
             from pywinauto import Desktop
+
             desktop = Desktop(backend="uia")
             shot_path = os.path.join(
-                self.screenshot_dir, f"crash_screen_{self.crash_time}.png"
+                self.screenshot_dir,
+                f"crash_screen_{self.crash_time}.png",
             )
             desktop.capture_as_image().save(shot_path)
+
+            # Vision 分析崩溃截图
+            va = self._get_vision()
+            if va and va.available:
+                try:
+                    from PIL import Image
+
+                    with Image.open(shot_path) as img:
+                        prompt = (
+                            "分析这张WPF桌面应用崩溃截图。请回答：\n"
+                            "1. 是否有错误对话框或崩溃对话框？它的标题是什么？\n"
+                            "2. 错误消息内容是什么？\n"
+                            "3. 错误类型属于：.NET运行时崩溃 / 应用级异常弹窗 / 系统级错误 / 正常状态\n"
+                            "4. 是否是'已停止工作'对话框？\n"
+                        )
+                        desc = va.analyze(img, prompt, max_tokens=512)
+                        if desc:
+                            txt_path = shot_path.replace(".png", "_vision.txt")
+                            with open(
+                                txt_path, "w", encoding="utf-8"
+                            ) as f:
+                                f.write(
+                                    f"崩溃场景分析 ({self.crash_time})\n"
+                                    f"{'='*50}\n"
+                                    f"Vision 分析:\n{desc}\n"
+                                )
+                except Exception:
+                    pass  # Vision 分析失败不阻塞
         except Exception:
             pass
 
