@@ -20,7 +20,7 @@
 - 📸 **失败自动截图 + AI 分析** — 测试失败时自动保存截图并发送给 Vision 分析，结果写入同目录的 `_vision.txt`
 - 🧹 **进程隔离** — 每条用例独立启动/清理，不留残留进程或配置
 - 🔌 **零服务依赖** — 不需要 WinAppDriver、Appium、Selenium Grid 或其他外部服务
-- 🔄 **多模型供应商支持** — Provider Adapter 模式，可切换阿里百炼/MiniMax/DeepSeek/智谱/OpenAI 等任意多模态模型
+- 🔄 **多模型供应商支持** — Provider Adapter 模式，可切换阿里百炼/MiniMax/智谱/OpenAI 等任意多模态模型
 
 ## 安装
 

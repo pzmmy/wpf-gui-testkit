@@ -89,12 +89,11 @@ class OpenAIVisionProvider:
     """OpenAI 兼容格式的多模态 API 适配器。
 
     适用于所有兼容 OpenAI /v1/chat/completions 格式的供应商：
-    - 阿里百炼（Qwen2.5-VL）
+    - 阿里百炼（Qwen2.5-VL / Qwen2-VL）
     - MiniMax（mini-max-vl-01）
-    - DeepSeek（deepseek-vl2）
     - 智谱 GLM-4V
-    - OpenAI 自身（gpt-4o / gpt-4-vision）
-    - 任何使用 messages+image_url 格式的 API
+    - OpenAI（gpt-4o / gpt-4-vision-preview）
+    - 任何使用 messages+image_url 格式的多模态 API
 
     认证方式支持：
     - Bearer Token（Authorization 头，默认）
