@@ -4,7 +4,7 @@
 核心概念：
 - VisionAnalyzer — 高层 API，封装截图分析和坐标定位
 - VisionProvider — 底层适配器接口，对接不同多模态模型 API
-- OpenAIVisionProvider — OpenAI 兼容格式的适配器（阿里百炼、MiniMax、DeepSeek 等）
+- OpenAIVisionProvider — OpenAI 兼容格式的适配器（阿里百炼、MiniMax、智谱、OpenAI 等）
 
 使用方式：
     from wpf_testkit.vision import VisionAnalyzer
