@@ -22,7 +22,35 @@ class PlaybookDef:
     name: str
     description: str             # 仅用于匹配
     prompt: str                  # 完整分析提示词
+    keywords: set[str] = None    # 预计算的关键词（中英文混合）。为 None 时从 description 自动提取
     fallback: bool = False       # 是否作为通用兜底 playbook
+
+    def __post_init__(self):
+        """自动从 description 提取关键词用于匹配。
+        
+        规则：
+        1. 英文按空格 split
+        2. 中文按标点符号和空格 split
+        3. 过滤掉 <=1 字符的无意义词
+        """
+        if self.keywords is not None:
+            return
+        import re
+        # 先按标点符号和空格分割中文描述
+        desc = self.description.lower()
+        tokens = set()
+        # 提取英文字词
+        for word in desc.split():
+            word = word.strip(",.;:!?，。；：！？、")
+            if len(word) > 1:
+                tokens.add(word)
+        # 提取中文字词（按常见标点分割）
+        for part in re.split(r'[，。；：！？、/\s]+', desc):
+            part = part.strip()
+            if len(part) > 1:
+                tokens.add(part)
+        # 过滤单个字符的噪声词
+        self.keywords = {t for t in tokens if len(t) > 1}
 
 
 # ── 预置 Playbook ──────────────────────────────────────
@@ -109,10 +137,18 @@ class SceneMatcher:
             scores.sort(key=lambda x: -x[0])
             matched = [pb for _, pb in scores[:top_k]]
 
-        # 如果匹配结果不足 top_k，用 fallback playbook 填充
-        if len(matched) < top_k:
+        # 如果匹配结果不足 top_k，或所有匹配分=0（无实际匹配），用 fallback 填充
+        top_score = scores[0][0] if scores else 0
+        if len(matched) < top_k or top_score <= 0:
             for pb in self._registry:
                 if pb.fallback and pb not in matched:
+                    # 如果 top_score>0，只追加；如果 top_score<=0，替换不匹配的
+                    if top_score <= 0:
+                        # 移除一个评分=0 的 playbook（排除 fallback 自身）
+                        for i, m in enumerate(matched):
+                            if not m.fallback:
+                                matched.pop(i)
+                                break
                     matched.append(pb)
                     if len(matched) >= top_k:
                         break
@@ -121,29 +157,36 @@ class SceneMatcher:
     def _compute_scores(self, intent: str) -> list[tuple[int, PlaybookDef]]:
         """计算所有 playbook 与 intent 的匹配评分。
 
-        评分规则（C-1 否定词处理）：
-        - 关键词交集正分 = 匹配词数 × 10
-        - 关键词包含正分 = 每个匹配词 +5
-        - 否定词惩罚 = 如果 intent 含否定词而 playbook 描述含正向词，-20
+        评分规则：
+        - 中文字符级 bigram 匹配（"弹窗是否关闭"→"弹窗"+"窗是"+"是否"+"否关"+"关闭"）
+        - 每个 bigram 出现在 description 中 +5
+        - intent 整体出现在 description 中 +20（精确命中）
+        - 否定词惩罚 -20
         """
         scores: list[tuple[int, PlaybookDef]] = []
         intent_lower = intent.lower()
-        intent_words = set(intent_lower.split())
+
+        # 生成中文字符 bigram
+        bigrams: set[str] = set()
+        chars = [c for c in intent_lower if '\u4e00' <= c <= '\u9fff']
+        for i in range(len(chars) - 1):
+            bigrams.add(chars[i] + chars[i + 1])
 
         # 检测 intent 是否含否定意图
         has_negation = any(n in intent_lower for n in _NEGATIONS)
 
         for pb in self._registry:
             desc_lower = pb.description.lower()
-            desc_words = set(desc_lower.split())
 
-            score = len(intent_words & desc_words) * 10
-            for kw in intent_words:
-                if kw in desc_lower:
-                    score += 5
+            # bigram 匹配
+            bigram_score = sum(5 for bg in bigrams if bg in desc_lower)
+
+            # 精确命中
+            exact_bonus = 20 if intent_lower in desc_lower else 0
+
+            score = bigram_score + exact_bonus
 
             # C-1: 否定词惩罚
-            # 用户说否定但 playbook 描述是正向 → 大惩罚
             if has_negation and any(p in desc_lower for p in _POSITIVE_DESCRIPTORS):
                 score -= 20
 
@@ -166,7 +209,8 @@ class BrainConfig:
 # ── 置信度判断 ─────────────────────────────────────────
 
 UNCERTAINTY_MARKERS = {
-    "不确定", "可能", "无法判断", "模糊", "不太清楚",
+    "不确定", "不太确定", "不确定的", "可能", "无法判断",
+    "模糊", "不太清楚", "不太确定",
     "unclear", "uncertain", "maybe", "not sure",
 }
 
