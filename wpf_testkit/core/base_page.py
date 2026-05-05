@@ -104,6 +104,37 @@ class BasePage:
         except Exception:
             ctrl.invoke()
 
+    def combo_select_by_text(self, auto_id: str, text: str,
+                             timeout: float = 10):
+        """从 ComboBox 中选择指定文本的项。
+
+        用键盘操作（Alt+↓ 展开 → 方向键 → Enter），
+        避开 WPF ComboBox select() 不支持的问题。
+
+        参数:
+            auto_id: ComboBox 的 AutomationId
+            text: 要选择的文本（精确匹配，不传则选第一项）
+            timeout: 等待控件的超时
+        """
+        ctrl = self.window.child_window(auto_id=auto_id)
+        ctrl.wait("enabled", timeout=timeout)
+        ctrl.set_focus()
+        ctrl.type_keys("%{DOWN}")  # Alt+↓ 展开
+        time.sleep(0.3)
+        if text:
+            # 向下遍历找匹配项（最多 50 项）
+            for _ in range(50):
+                try:
+                    cur_text = ctrl.window_text()
+                except Exception:
+                    break
+                if text in cur_text:
+                    break
+                ctrl.type_keys("{DOWN}")
+                time.sleep(0.2)
+        ctrl.type_keys("{ENTER}")
+        time.sleep(0.3)
+
     def set_text(self, auto_id: str, text: str, timeout: float = 10):
         """在文本框中输入内容。
 
@@ -119,6 +150,33 @@ class BasePage:
         """获取控件文本内容。"""
         ctrl = self.window.child_window(auto_id=auto_id)
         return ctrl.window_text() if ctrl.exists() else ""
+
+    @staticmethod
+    def safe_text(ctrl) -> str:
+        """安全获取控件文本，兼容 GBK 编码异常。
+
+        在中文 Windows 上，控件含 emoji 或特殊 Unicode 字符时，
+        window_text() 可能抛 UnicodeEncodeError。此方法兜底处理。
+        """
+        try:
+            return ctrl.window_text()
+        except UnicodeEncodeError:
+            try:
+                return ctrl.window_text().encode(
+                    'utf-8', errors='replace').decode('utf-8')
+            except Exception:
+                return ""
+
+    @staticmethod
+    def log(msg: str) -> None:
+        """输出日志（兼容 GBK 编码）。默认带时间戳 + 立即 flush。"""
+        from datetime import datetime
+        line = f"[{datetime.now():%H:%M:%S}] {msg}"
+        try:
+            print(line, flush=True)
+        except UnicodeEncodeError:
+            print(line.encode('utf-8', errors='replace').decode(
+                'utf-8', errors='replace'), flush=True)
 
     def is_element_visible(self, auto_id: str) -> bool:
         """判断控件是否可见。"""

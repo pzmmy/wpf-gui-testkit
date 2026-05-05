@@ -40,6 +40,17 @@ GUIDE_WINDOW_TITLE = os.environ.get("WPF_TEST_GUIDE_WINDOW_TITLE", "")
 # ── 辅助函数 ──
 
 
+def log(msg: str) -> None:
+    """输出日志（兼容 GBK 编码）。"""
+    from datetime import datetime
+    line = f"[{datetime.now():%H:%M:%S}] {msg}"
+    try:
+        print(line, flush=True)
+    except UnicodeEncodeError:
+        print(line.encode('utf-8', errors='replace').decode(
+            'utf-8', errors='replace'), flush=True)
+
+
 def kill_all_app() -> None:
     """强制结束所有被测应用进程（含子进程），带超时保护。"""
     timeout = 5  # 单进程最多等 5 秒

@@ -3,4 +3,4 @@
 基于 Python + pywinauto (UIA backend) + pytest，零外部服务依赖。
 """
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"

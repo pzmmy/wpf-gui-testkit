@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.6 (2026-05-05)
+
+- 🆕 **GBK 编码兼容** — `BasePage.safe_text()` 安全获取控件文本，兼容中文 Windows 上 emoji/特殊字符
+- 🆕 **`BasePage.log()`** — 静态日志方法，自动处理 GBK 编码 + 时间戳 + flush
+- 🆕 **`conftest.log()`** — conftest 层日志函数，用于 fixture 中输出
+- 🆕 **`BasePage.combo_select_by_text()`** — ComboBox 键盘选择，避开 WPF select() 不支持的问题
+
 ## v0.4.5 (2026-05-04)
 
 - 🆕 **测爷第二轮评审修复** — 覆盖缺口全部补齐（5 项，0🔴）
