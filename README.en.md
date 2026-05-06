@@ -177,7 +177,95 @@ wpf-gui-testkit/
 | `within_threshold(threshold)` | Whether diff is within threshold (default 5%) |
 | `summary()` | Human-readable summary |
 
-## Making Your WPF App Testable
+## Vision Extension (Multi-modal LLM)
+
+wpf-gui-testkit supports optional multi-modal LLM integration for screenshot-based UI analysis.
+This replaces brittle UIA control enumeration with visual understanding.
+
+### Installation
+
+```bash
+pip install wpf-gui-testkit[vision]
+```
+
+Requires `requests` and `Pillow`.
+
+### Configuration
+
+```bash
+# Required: API key for your vision provider
+export VISION_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+export VISION_MODEL=qwen2.5-vl-72b-instruct
+export ALIYUN_VISION_API_KEY=sk-xxx
+```
+
+Supports any OpenAI-compatible vision API. Switch providers by changing env vars:
+
+```bash
+# MiniMax
+export VISION_API_URL=https://api.minimaxi.com/v1/chat/completions
+export VISION_MODEL=minimax-vl-01
+export MINIMAX_API_KEY=mm-xxx
+```
+
+### Provider Adapter Pattern
+
+Vision providers follow a Protocol interface — swap models without changing code:
+
+```python
+from wpf_testkit.vision import VisionAnalyzer, OpenAIVisionProvider
+
+# Custom provider
+provider = OpenAIVisionProvider(
+    api_url="https://api.minimaxi.com/v1/chat/completions",
+    api_key="mm-xxx",
+    model="minimax-vl-01",
+)
+va = VisionAnalyzer(provider=provider)
+```
+
+### Skills Playbook Auto-Selection (v3.1)
+
+SceneMatcher automatically selects the best analysis prompt based on intent:
+
+```python
+from wpf_testkit.vision import get_analyzer
+
+va = get_analyzer()
+
+# Auto-match playbook
+result = va.analyze_with_intent(screenshot, "check if dialog is closed")
+# → SceneMatcher matches "dialog-verify" playbook
+# → Injects professional prompt automatically
+
+# Register custom domain playbook
+va.register_custom_playbook(
+    name="player-controls",
+    description="detect audio player status: playing, paused, stopped",
+    prompt="Analyze the player controls in this screenshot. "
+           "1) Is the play button ▶ (play) or ▢ (pause)? "
+           "2) Is there a progress bar moving?",
+)
+```
+
+6 built-in playbooks: dialog-verify, playback-status, control-existence, layout-integrity, error-state, mini-mode.
+
+### Multi-Model Brain Separation (v3.1)
+
+Cheap Brain (lightweight model, low resolution) for quick screening + Premium Brain (high-accuracy) for deep inspection. Auto mode saves ~83% cost:
+
+```python
+# auto mode (default): cheap first, premium if uncertain
+result = va.analyze_with_intent(screenshot, "is the play button visible")
+
+# force cheap (frequent checks)
+result = va.analyze_with_intent(screenshot, "is the dialog closed", brain="cheap")
+
+# force premium (critical validation)
+result = va.analyze_with_intent(screenshot, "verify all text is correct", brain="premium")
+```
+
+In auto mode, ~90% of checks use cheap model; only ~10% require premium.
 
 wpf-gui-testkit uses UI Automation (UIA) to locate controls. WPF supports UIA out of the box, but there are a few key points to get right.
 
