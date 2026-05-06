@@ -313,6 +313,39 @@ class VisionAnalyzer:
             return None
         return self._provider.analyze(img, prompt, max_tokens, detail)
 
+    # ── SceneMatcher 集成（v3.1 Skills Playbook + 多模型角色分离） ──
+
+    def analyze_with_intent(
+        self,
+        img,
+        intent: str,
+        max_tokens: int = 1024,
+        detail: str = "high",
+        brain: str = "auto",
+        max_premium_retries: int = 1,
+    ) -> Optional[str]:
+        """根据场景意图自动选择 playbook 并分析。
+
+        参数:
+            img: PIL Image
+            intent: 场景意图描述（如 "弹窗是否关闭"）
+            brain: "auto" | "cheap" | "premium"
+                auto = 先 cheap(低分辨率) 看置信度，不够再 premium 精检
+            max_premium_retries: auto 模式 premium 重试次数
+
+        首次调用时自动初始化 SceneMatcher。
+        """
+        return _analyze_with_intent(
+            self, img, intent, max_tokens, detail, brain, max_premium_retries
+        )
+
+    def register_custom_playbook(
+        self, name: str, description: str, prompt: str,
+        fallback: bool = False,
+    ) -> None:
+        """注册自定义 playbook（如 BasePage 初始化时注册 WPF 专用场景）。"""
+        _register_custom_playbook(self, name, description, prompt, fallback)
+
     def healthy_check(self) -> bool:
         """健康检测。失败时自动禁用自身。"""
         if not self._enabled:
@@ -406,3 +439,77 @@ def reset_analyzer():
     """重置全局分析器（测试用）。"""
     global _global_analyzer
     _global_analyzer = None
+
+
+# ── SceneMatcher 集成函数 ─────────────────────────────────
+
+def _analyze_with_intent(
+    self: VisionAnalyzer,
+    img,
+    intent: str,
+    max_tokens: int = 1024,
+    detail: str = "high",
+    brain: str = "auto",
+    max_premium_retries: int = 1,
+) -> Optional[str]:
+    """SceneMatcher 匹配 + 多模型降级逻辑。
+
+    内部函数，通过 VisionAnalyzer.analyze_with_intent() 调用。
+    延迟初始化 SceneMatcher，兼容无 SceneMatcher 模块的环境。
+    """
+    if not self._enabled:
+        return None
+
+    try:
+        from wpf_testkit.scene_matcher import SceneMatcher, _is_conclusive
+    except ImportError:
+        # 无 scene_matcher 模块时直接走 analyze
+        return self._provider.analyze(img, intent, max_tokens, detail)
+
+    # 延迟初始化 SceneMatcher
+    if not hasattr(self, "_matcher"):
+        self._matcher = SceneMatcher()
+
+    matched = self._matcher.match(intent)
+    prompt = matched[0].prompt if matched else intent
+
+    if brain == "premium":
+        return self._provider.analyze(img, prompt, max_tokens, detail)
+    if brain == "cheap":
+        return self._provider.analyze(img, prompt, min(max_tokens, 256), "low")
+
+    # auto 模式：先 cheap
+    cheap_result = self._provider.analyze(img, prompt, min(max_tokens, 256), "low")
+    if cheap_result is None:
+        return None
+    if _is_conclusive(cheap_result):
+        return cheap_result
+
+    # 不够确定，重试 premium
+    premium_result: Optional[str] = None
+    for _ in range(max_premium_retries):
+        premium_result = self._provider.analyze(img, prompt, max_tokens, detail)
+        if premium_result is not None and _is_conclusive(premium_result):
+            return premium_result
+
+    return premium_result
+
+
+def _register_custom_playbook(
+    self: VisionAnalyzer,
+    name: str,
+    description: str,
+    prompt: str,
+    fallback: bool = False,
+) -> None:
+    """为 VisionAnalyzer 注册自定义 playbook。"""
+    try:
+        from wpf_testkit.scene_matcher import SceneMatcher, PlaybookDef
+    except ImportError:
+        return
+
+    if not hasattr(self, "_matcher"):
+        self._matcher = SceneMatcher()
+    self._matcher.register(
+        PlaybookDef(name=name, description=description, prompt=prompt, fallback=fallback)
+    )

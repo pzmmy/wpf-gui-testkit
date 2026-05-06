@@ -351,6 +351,48 @@ result = vd.compare("current.png", "baseline.png")
 assert result.within_threshold(0.05), result.summary()
 ```
 
+### Skills Playbook 自动选择（v3.1）
+
+根据场景意图自动匹配合适的分析提示词模板，无需手写 prompt：
+
+```python
+from wpf_testkit.vision import get_analyzer
+
+va = get_analyzer()
+
+# 自动匹配 playbook（推荐）
+result = va.analyze_with_intent(screenshot, "确认弹窗已经关闭")
+# → SceneMatcher 匹配到 dialog-verify playbook
+# → 自动注入专业 prompt 进行分析
+
+# 注册自定义 playbook（适用于业务专用场景）
+va.register_custom_playbook(
+    name="jianting-main",
+    description="简听收音机主界面：电台列表、播放控制、音量、收藏",
+    prompt="分析简听收音机主界面截图。1)电台列表是否已加载？"
+           "2)当前选中的电台名？3)播放按钮状态？4)音量滑块位置？",
+)
+```
+
+预置 6 个 playbook：dialog-verify、playback-status、control-existence、layout-integrity、error-state、mini-mode。
+
+### 多模型角色分离（v3.1）
+
+Cheap Brain（轻量模型低分辨率）做粗筛 + Premium Brain（高精度模型）做精检，auto 模式自动降级，可节省约 83% 成本：
+
+```python
+# auto 模式（默认）：先 cheap 看置信度，不确信再 premium
+result = va.analyze_with_intent(screenshot, "播放按钮是否存在")
+
+# 强制 cheap（高频检查）
+result = va.analyze_with_intent(screenshot, "弹窗是否关闭", brain="cheap")
+
+# 强制 premium（关键验证）
+result = va.analyze_with_intent(screenshot, "界面上所有文字是否正确", brain="premium")
+```
+
+auto 模式下 90% 的常见检查由 cheap 模型完成，仅 10% 需要 premium 精检。
+
 ## 如何让 WPF 应用可测试
 
 wpf-gui-testkit 依赖 UI Automation (UIA) 框架来识别控件。WPF 项目默认支持 UIA，但有几个关键点需要配合。

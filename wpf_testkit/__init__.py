@@ -3,4 +3,26 @@
 基于 Python + pywinauto (UIA backend) + pytest，零外部服务依赖。
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
+
+# ── 核心 vision 模块导出 ──
+try:
+    from wpf_testkit.vision import (
+        VisionAnalyzer,
+        VisionProvider,
+        OpenAIVisionProvider,
+        get_analyzer,
+        reset_analyzer,
+    )
+except ImportError:
+    pass
+
+# ── SceneMatcher 模块导出（独立于 vision） ──
+try:
+    from wpf_testkit.scene_matcher import (
+        SceneMatcher,
+        PlaybookDef,
+        _is_conclusive,
+    )
+except ImportError:
+    pass
