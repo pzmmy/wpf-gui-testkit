@@ -3,7 +3,7 @@
 基于 Python + pywinauto (UIA backend) + pytest，零外部服务依赖。
 """
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 
 # ── 核心 vision 模块导出 ──
 try:

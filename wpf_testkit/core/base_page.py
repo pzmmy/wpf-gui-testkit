@@ -173,17 +173,7 @@ class BasePage:
         if x_pct is None or y_pct is None:
             raise RuntimeError(f"Vision 坐标解析失败: {result}")
 
-        screen_w = ctypes.windll.user32.GetSystemMetrics(0)
-        screen_h = ctypes.windll.user32.GetSystemMetrics(1)
-        click_x = int(screen_w * x_pct / 100)
-        click_y = int(screen_h * y_pct / 100)
-
-        user32 = ctypes.windll.user32
-        user32.SetCursorPos(click_x, click_y)
-        user32.mouse_event(0x0002, 0, 0, 0, 0)  # MOUSEEVENTF_LEFTDOWN
-        user32.mouse_event(0x0004, 0, 0, 0, 0)  # MOUSEEVENTF_LEFTUP
-        if debug:
-            print(f"[BasePage] Vision 坐标点击 ({click_x}, {click_y})")
+        self._click_at_vision_coords(x_pct, y_pct, f"auto_id={auto_id}", debug)
 
     def click_input_element(self, auto_id: str, timeout: float = 10):
         """用 click_input 替代 click，适合 WPF 自定义控件。"""
