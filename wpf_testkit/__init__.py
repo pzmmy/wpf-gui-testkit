@@ -22,7 +22,6 @@ try:
     from wpf_testkit.scene_matcher import (
         SceneMatcher,
         PlaybookDef,
-        _is_conclusive,
     )
 except ImportError:
     pass
