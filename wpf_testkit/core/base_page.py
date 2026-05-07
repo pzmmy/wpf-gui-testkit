@@ -292,7 +292,31 @@ class BasePage:
 
     # ── Vision 驱动控件定位（无 AutomationId） ──
 
-    def click_by_vision(
+    def _click_at_vision_coords(
+        self, x_pct: float, y_pct: float, desc: str = "", debug: bool = False
+    ):
+        """解析 Vision 坐标（窗口内百分比）并执行 Win32 鼠标点击。
+
+        使用窗口相对坐标而非屏幕绝对坐标，避免窗口非全屏或多显示器时点击偏移。
+        """
+        user32 = ctypes.windll.user32
+        win_rect = self.window.rectangle()
+        win_left, win_top = win_rect.left, win_rect.top
+        win_w = win_rect.width()
+        win_h = win_rect.height()
+        cx = win_left + int(win_w * x_pct / 100)
+        cy = win_top + int(win_h * y_pct / 100)
+        user32.SetCursorPos(cx, cy)
+        user32.mouse_event(0x0002, 0, 0, 0, 0)  # LEFTDOWN
+        user32.mouse_event(0x0004, 0, 0, 0, 0)  # LEFTUP
+        if debug and desc:
+            print(
+                f"[BasePage] _click_at_vision_coords '{desc}' "
+                f"窗口 ({win_w}x{win_h}) @ ({win_left},{win_top}) "
+                f"点击 ({cx}, {cy})"
+            )
+
+    def _vision_click_element(
         self,
         description: str,
         timeout: float = 10,
@@ -335,19 +359,7 @@ class BasePage:
                         except (IndexError, ValueError):
                             pass
                 if x_pct is not None and y_pct is not None:
-                    user32 = ctypes.windll.user32
-                    sw = user32.GetSystemMetrics(0)
-                    sh = user32.GetSystemMetrics(1)
-                    cx = int(sw * x_pct / 100)
-                    cy = int(sh * y_pct / 100)
-                    user32.SetCursorPos(cx, cy)
-                    user32.mouse_event(0x0002, 0, 0, 0, 0)  # LEFTDOWN
-                    user32.mouse_event(0x0004, 0, 0, 0, 0)  # LEFTUP
-                    if debug:
-                        print(
-                            f"[BasePage] click_by_vision '{description}' "
-                            f"坐标 ({cx}, {cy})"
-                        )
+                    self._click_at_vision_coords(x_pct, y_pct, description, debug)
                     return
             last_error = result
             time.sleep(1)
