@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wpf-gui-testkit"
-version = "0.6.1"
+version = "0.6.2"
 description = "通用 WPF GUI 自动化测试框架 — pip install 即用，零外部服务依赖"
 readme = "README.md"
 license = { text = "MIT" }
@@ -15,7 +15,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Topic :: Software Development :: Testing :: UI",
+    "Topic :: Software Development :: Testing",
 ]
 
 dependencies = [

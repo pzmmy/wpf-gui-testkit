@@ -288,8 +288,16 @@ class BasePage:
         """解析 Vision 坐标（窗口内百分比）并执行 Win32 鼠标点击。
 
         使用窗口相对坐标而非屏幕绝对坐标，避免窗口非全屏或多显示器时点击偏移。
+
+        Raises:
+            RuntimeError: 非 Windows 平台无法执行 Win32 鼠标事件。
         """
-        user32 = ctypes.windll.user32
+        try:
+            user32 = ctypes.windll.user32
+        except AttributeError:
+            raise RuntimeError(
+                "_click_at_vision_coords 仅支持 Windows 平台"
+            )
         win_rect = self.window.rectangle()
         win_left, win_top = win_rect.left, win_rect.top
         win_w = win_rect.width()
