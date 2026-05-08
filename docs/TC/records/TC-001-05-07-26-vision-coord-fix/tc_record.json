@@ -1,0 +1,136 @@
+{
+  "tc_id": "TC-001-05-07-26-vision-coord-fix",
+  "parent_tc": null,
+  "title": "Vision 坐标统一窗口相对化 + 审爷评审修复",
+  "status": "deployed",
+  "priority": "high",
+  "created": "2026-05-07T08:30:00+08:00",
+  "updated": "2026-05-07T08:35:00+08:00",
+  "created_by": "ai:hermes-agent",
+  "project": "wpf-gui-testkit",
+  "description": {
+    "summary": "审爷评审发现 Vision 点击坐标用了 GetSystemMetrics 屏幕绝对坐标，多屏/非全屏点击偏移。三处代码统一为 _click_at_vision_coords 公共方法 + 窗口相对坐标。",
+    "motivation": "审爷 Code Review 发现 C-1 真 bug",
+    "scope": "bugfix",
+    "breaking_changes": [],
+    "dependencies": []
+  },
+  "files_affected": [
+    {
+      "path": "wpf_testkit/core/base_page.py",
+      "action": "modified",
+      "description": "提取 _click_at_vision_coords 公共方法，_vision_click_element 和 click_by_vision 统一调用",
+      "lines_added": 26,
+      "lines_removed": 14
+    },
+    {
+      "path": "wpf_testkit/scene_matcher.py",
+      "action": "modified",
+      "description": "删除重复的 analyze_with_intent 和 register_custom_playbook",
+      "lines_added": 0,
+      "lines_removed": 72
+    },
+    {
+      "path": "wpf_testkit/__init__.py",
+      "action": "modified",
+      "description": "移除 _is_conclusive 公开导出",
+      "lines_added": 0,
+      "lines_removed": 1
+    },
+    {
+      "path": "pyproject.toml",
+      "action": "modified",
+      "description": "版本升到 0.6.2，分类器从 Testing :: UI 改为 Testing",
+      "lines_added": 2,
+      "lines_removed": 2
+    }
+  ],
+  "revision_history": [
+    {
+      "revision_id": "R1",
+      "timestamp": "2026-05-07T08:30:00+08:00",
+      "author": "ai:hermes-agent",
+      "description": "C-1/W-1/S-3 修复",
+      "commit_hash": "76ec474"
+    },
+    {
+      "revision_id": "R2",
+      "timestamp": "2026-05-07T08:32:00+08:00",
+      "author": "ai:hermes-agent",
+      "description": "S-1 移除 _is_conclusive 导出",
+      "commit_hash": "dc1f532"
+    },
+    {
+      "revision_id": "R3",
+      "timestamp": "2026-05-07T08:33:00+08:00",
+      "author": "ai:hermes-agent",
+      "description": "v0.6.1 全部修复+bump",
+      "commit_hash": "21d472f"
+    },
+    {
+      "revision_id": "R4",
+      "timestamp": "2026-05-07T08:34:00+08:00",
+      "author": "ai:hermes-agent",
+      "description": "非 Windows 平台防护",
+      "commit_hash": "6e2bd24"
+    }
+  ],
+  "test_cases": [
+    {
+      "test_id": "TC-scene_matcher",
+      "description": "scene_matcher 24项测试",
+      "status": "pass",
+      "evidence": "测爷复测 95 PASS / 0 FAIL"
+    },
+    {
+      "test_id": "TC-vision",
+      "description": "vision 24项测试",
+      "status": "pass",
+      "evidence": "测爷复测 95 PASS / 0 FAIL"
+    },
+    {
+      "test_id": "TC-base_page",
+      "description": "base_page 23项测试",
+      "status": "pass",
+      "evidence": "测爷复测 95 PASS / 0 FAIL"
+    },
+    {
+      "test_id": "TC-visual_diff",
+      "description": "visual_diff 17项测试",
+      "status": "pass",
+      "evidence": "测爷复测 95 PASS / 0 FAIL"
+    },
+    {
+      "test_id": "TC-crash_daemon",
+      "description": "crash_daemon 7项测试",
+      "status": "pass",
+      "evidence": "测爷复测 95 PASS / 0 FAIL"
+    }
+  ],
+  "approval": {
+    "reviewer": "审爷(review.sh)",
+    "status": "approved",
+    "comments": "两轮评审通过，签发可合并",
+    "date": "2026-05-07T08:34:00+08:00"
+  },
+  "session_context": {
+    "session_id": "hermes-session-2026-05-07",
+    "last_activity": "2026-05-07T08:35:00+08:00",
+    "resume_instructions": "已全部完成并发布 v0.6.2",
+    "progress": "100% - 已部署"
+  },
+  "tags": [
+    "vision",
+    "code-review",
+    "refactor",
+    "pyPI-release"
+  ],
+  "related_tcs": [],
+  "notes": [
+    "测爷复测确认 3处坐标代码全部统一，GetSystemMetrics 已全部清理"
+  ],
+  "metadata": {
+    "schema_version": "1.0.0",
+    "skill_version": "1.0.0"
+  }
+}

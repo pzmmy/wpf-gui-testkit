@@ -1,0 +1,16 @@
+{
+  "project_name": "wpf-gui-testkit",
+  "records": [
+    {
+      "tc_id": "TC-001-05-07-26-vision-coord-fix",
+      "title": "Vision 坐标统一窗口相对化 + 审爷评审修复",
+      "status": "deployed",
+      "created": "2026-05-07T08:30:00+08:00",
+      "updated": "2026-05-07T08:35:00+08:00",
+      "priority": "high",
+      "path": "records/TC-001-05-07-26-vision-coord-fix/tc_record.json"
+    }
+  ],
+  "last_updated": "2026-05-07T08:35:00+08:00",
+  "total_count": 1
+}
